@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 import glob
+import datetime
 from PIL import Image
 import keras.optimizers
 from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, TensorBoard
@@ -11,8 +12,28 @@ from params import args
 import model_factory
 
 if __name__ == '__main__':
-    INPUT_RAW_DIR = '../input/raw/'
-    INPUT_PREPROCESSED_DIR = '../input/preprocessed/'
+    date_format = '%Y-%m-%d'
+
+def get_period(start_day, split_day, end_day):
+    train_start = start_day
+    train_end = split_day - datetime.timedelta(days=1)
+    train_period = (train_end - train_start).days + 1
+    val_start = split_day
+    val_end = end_day -  datetime.timedelta(days=args.delay)
+    val_period = (val_end - val_start).days + 1
+    test_start = val_end + datetime.timedelta(days=1)
+    test_end = end_day
+    test_period = (test_end - test_start).days + 1
+    print('train period: {} ~ {} ({}days)'.format(train_start.strftime(date_format),
+                                                  train_end.strftime(date_format),
+                                                  train_period))
+    print('validate period: {} ~ {} ({}days)'.format(val_start.strftime(date_format),
+                                                     val_end.strftime(date_format),
+                                                     val_period))
+    print('test period: {} ~ {} ({}days)'.format(test_start.strftime(date_format),
+                                                 test_end.strftime(date_format),
+                                                 test_period))
+    return train_period, val_period
 
 def find_class_by_name(name, modules):
     modules = [getattr(module, name, None) for module in modules]
@@ -46,17 +67,17 @@ def get_grid_data(df):
     df = df[df['latitude'] <= 46] #456
     df = df[df['longitude'] >= 129] #1285
     df = df[df['longitude'] <= 147] #1470
-    df['l/l'] = df['latitude'].astype(str) + '-' + df['longitude'].astype(str)
-    df = df[['year', 'month', 'day', 'l/l']]
-    df = df.set_index('l/l')
+    df['latlon'] = df['latitude'].astype(str) + '-' + df['longitude'].astype(str)
+    df = df[['year', 'month', 'day', 'latlon']]
+    df = df.set_index('latlon')
     df = df.reset_index()
     return df
 
 def get_daily_data(df, start, end, dummy_col):
     df['time'] = df['year'].astype(str) + '-' + df['month'].astype(str) + '-' + df['day'].astype(str)
     df['time'] = pd.to_datetime(df['time'])
-    df = df[['time', 'l/l']]
-    df = pd.get_dummies(df, columns=['l/l'], prefix='', prefix_sep='')
+    df = df[['time', 'latlon']]
+    df = pd.get_dummies(df, columns=['latlon'], prefix='', prefix_sep='')
     col = pd.DataFrame(columns=dummy_col)
     df = df.merge(col, how='outer')
     df = df.sort_index(axis=1)
@@ -95,7 +116,7 @@ def generator(data, lookback, delay, min_idx, max_idx, shuffle, batch_size, step
             targets[j] = data[rows[j] + delay][258:]
         yield samples, targets
 
-def train_and_validate(float_data, dummy_col):
+def train_and_validate(float_data, dummy_col, train_period, val_period):
     lookback = args.lookback
     step = args.step
     delay = args.delay
@@ -105,29 +126,29 @@ def train_and_validate(float_data, dummy_col):
                           lookback=lookback,
                           delay=delay,
                           min_idx=0,
-                          max_idx=args.train_max_idx,
+                          max_idx=train_period,
                           shuffle=False,
                           step=step,
                           batch_size=batch_size)
     val_gen = generator(float_data,
                         lookback=lookback,
                         delay=delay,
-                        min_idx=args.train_max_idx + 1,
-                        max_idx=args.val_max_idx,
+                        min_idx=train_period + 1,
+                        max_idx=val_period,
                         shuffle=False,
                         step=step,
                         batch_size=batch_size)
     test_gen = generator(float_data,
                          lookback=lookback,
                          delay=delay,
-                         min_idx=args.val_max_idx + 1,
-                         max_idx=args.test_max_idx,
+                         min_idx=val_period + 1,
+                         max_idx=None,
                          shuffle=False,
                          step=step,
                          batch_size=batch_size)
-    train_steps = (4000 - 0 - lookback) // batch_size
-    val_steps = (5000 - 4001 - lookback) // batch_size
-    test_steps = (len(float_data) - 5001 - lookback) // batch_size
+    train_steps = (train_period - lookback) // batch_size
+    val_steps = (val_period - train_period - lookback) // batch_size
+    test_steps = (len(float_data) - val_period - lookback) // batch_size
     if args.model == 'NaiveModel':
         batch_losses = []
         for step in range(val_steps):
@@ -144,7 +165,7 @@ def train_and_validate(float_data, dummy_col):
     callbacks = [
         ModelCheckpoint(filepath='my_model.h5'),
         ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10)#,
-        #TensorBoard(log_dir='../log/', histogram_freq=1, embeddings_freq=1
+        #TensorBoard(log_dir=args.log_dir, histogram_freq=1, embeddings_freq=1
         ]
     history = model.fit_generator(train_gen,
                                   steps_per_epoch=train_steps,
@@ -177,15 +198,18 @@ def train_and_validate(float_data, dummy_col):
     print(evaluate)
 
 def main():
-    raw_files = glob.glob(INPUT_RAW_DIR + 'h20*')
-    raw_files.sort()
-    csv_file = INPUT_PREPROCESSED_DIR + 'df.csv'
+    start_day = datetime.datetime.strptime(args.start_day, '%Y-%m-%d')
+    split_day = datetime.datetime.strptime(args.split_day, '%Y-%m-%d')
+    end_day = datetime.datetime.strptime(args.end_day, '%Y-%m-%d')
+    train_period, val_period = get_period(start_day, split_day, end_day)
+    raw_files = sorted(glob.glob(args.input_raw_dir + 'h????'))
+    csv_file = args.input_preprocessed_dir + 'df.csv'
     if not os.path.exists(csv_file):
         raw_to_csv(raw_files, csv_file)
     df = pd.read_csv(csv_file)
     df_m2 = df[df['magnitude'] >= 20]
     df_m2 = get_grid_data(df_m2)
-    latlon = df_m2['l/l'].unique()
+    latlon = df_m2['latlon'].unique()
     df_m2 = get_daily_data(df_m2, start=args.start_day, end=args.end_day, dummy_col=latlon)
     df_m4 = df[df['magnitude'] >= 40]
     df_m4 = get_grid_data(df_m4)
@@ -194,52 +218,12 @@ def main():
     print(df_m4.head())
     float_data_m2 = df_m2.values.astype(np.float64)
     float_data_m4 = df_m4.values.astype(np.float64)
-    float_data_m2 = scaling(float_data_m2, 4000)
-    float_data_m4 = scaling(float_data_m4, 4000)
+    float_data_m2 = scaling(float_data_m2, train_period)
+    float_data_m4 = scaling(float_data_m4, train_period)
     float_data = np.hstack([float_data_m2, float_data_m4])
     print(float_data.shape)
-    train_and_validate(float_data, latlon)
+    train_and_validate(float_data, latlon, train_period, val_period)
     return
 
 if __name__ == '__main__':
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-""" CSEPに関するメモ """
-#予測検証期間
-# 1日, 3ヶ月, 1年, 3年
-#予測する地震数のマグニチュード
-# 3ヶ月以内: M>=4
-# 1年以上: M>=5
-#予測検証手法
-# N-test (地震総数テスト): N
-# M-test (地震規模の頻度分布テスト): γ
-# L-test (時空間規模分布の尤度テスト): κ
-# S-test (空間テスト): ζ
-# R-test (尤度比テスト)
-
-""" 現在未使用関数置き場 """
-#全期間の場所ごとの地震数を可視化
-def plot_all_eq(df):
-    df = df.sum()
-    df = df.reset_index()
-    df['lat'] = df['index'].str[:2].astype(int)
-    df['lon'] = df['index'].str[3:].astype(int)
-    df = df.iloc[:, 1:]
-    df.columns = ['num_seis', 'lat', 'lon']
-    print(df)
