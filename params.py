@@ -20,11 +20,13 @@ arg('--optimizer', default='SGD')
 arg('--loss', default='mae')
     #'mae'
     #'mse'
-arg('--epochs', type=int, default=20)
-arg('--start_day', default='2000-01-01')
-arg('--split_day', default='2014-11-01')
+arg('--epochs', type=int, default=15)
+arg('--start_day', default='1998-02-01')
+arg('--split_day_1', default='2009-02-01')
+arg('--split_day_2', default='2012-02-01')
 arg('--end_day', default='2016-01-31')
 arg('--model', default='SimpleRNNmodel')
+    #'NaiveModel'
     #'SimpleRNNmodel'
     #'GRUmodel'
     #'StackingGRUmodel'
