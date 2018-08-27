@@ -3,10 +3,10 @@ from keras.models import Sequential
 from keras import layers
 
 class NaiveModel():
-    def build_model(self, val_gen, val_steps, target_length):
+    def build_model(self, test_gen, test_steps, target_length):
         batch_losses = []
-        for step in range(val_steps):
-            samples, targets = next(val_gen)
+        for step in range(test_steps):
+            samples, targets = next(test_gen)
             preds = samples[:, -1, target_length:]
             loss = np.mean(np.abs(preds - targets))
             batch_losses.append(loss)

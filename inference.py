@@ -99,57 +99,43 @@ def scaling(float_data, end_idx):  #min-max scaling
     float_data /= max
     return float_data
 
-def generator(data, lookback, delay, min_idx, max_idx, shuffle, batch_size, step, target_length):
+def generator(data, lookback, min_idx, max_idx, batch_size, target_length):
     if max_idx is None:
-        max_idx = len(data) - delay - 1
+        max_idx = len(data) - 1
     i = min_idx + lookback
     while 1:
-        if shuffle:
-            rows = np.random.randint(min_idx + lookback, max_idx, size=batch_size)
-        else:
-            if i + batch_size >= max_idx:
-                i = min_idx + lookback
-            rows = np.arange(i, min(i + batch_size, max_idx))
-            i += len(rows)
-        samples = np.zeros((len(rows), lookback // step, data.shape[-1]))
+        if i + batch_size >= max_idx:
+            i = min_idx + lookback
+        rows = np.arange(i, min(i + batch_size, max_idx))
+        i += len(rows)
+        samples = np.zeros((len(rows), lookback, data.shape[-1]))
         targets = np.zeros((len(rows), target_length))
         for j, row in enumerate(rows):
-            idxs = range(rows[j] - lookback, rows[j], step)
-            samples[j] = data[idxs]
-            targets[j] = data[rows[j] + delay][target_length:]
+            idxs = range(rows[j] - lookback, rows[j])
+            samples[j] = data[idxs][:]
+            targets[j] = data[rows[j]][-target_length:]
         yield samples, targets
 
 def train_and_validate(float_data, dummy_col, target_length, train_period, val_period, test_period):
     lookback = args.lookback
-    step = args.step
-    delay = args.delay
     batch_size = args.batch_size
     optimizer_class = find_class_by_name(args.optimizer, [keras.optimizers])
     train_gen = generator(float_data,
                           lookback=lookback,
-                          delay=delay,
                           min_idx=0,
                           max_idx=train_period,
-                          shuffle=False,
-                          step=step,
                           batch_size=batch_size,
                           target_length=target_length)
     val_gen = generator(float_data,
                         lookback=lookback,
-                        delay=delay,
                         min_idx=train_period + 1,
                         max_idx=train_period + val_period,
-                        shuffle=False,
-                        step=step,
                         batch_size=batch_size,
                         target_length=target_length)
     test_gen = generator(float_data,
                          lookback=lookback,
-                         delay=delay,
                          min_idx=train_period + val_period + 1,
                          max_idx=None,
-                         shuffle=False,
-                         step=step,
                          batch_size=batch_size,
                          target_length=target_length)
     train_steps = (train_period - lookback) // batch_size
@@ -163,11 +149,9 @@ def train_and_validate(float_data, dummy_col, target_length, train_period, val_p
                                                                           optimizer=optimizer_class(),
                                                                           loss=args.loss)
     model.summary()
-    callbacks = [
-        ModelCheckpoint(filepath=args.log_dir + 'my_model.h5'),
-        ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10)#,
-        #TensorBoard(log_dir=args.log_dir, histogram_freq=1, embeddings_freq=1
-        ]
+    callbacks = [ModelCheckpoint(filepath=args.log_dir + 'my_model.h5'),
+                 ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10)]
+                 #TensorBoard(log_dir=args.log_dir + 'tensorboard/', histogram_freq=1, embeddings_freq=1)
     history = model.fit_generator(train_gen,
                                   steps_per_epoch=train_steps,
                                   epochs=args.epochs,
@@ -179,8 +163,8 @@ def train_and_validate(float_data, dummy_col, target_length, train_period, val_p
     val_loss = history.history['val_loss']
     epochs = range(len(loss))
     plt.figure()
-    plt.plot(epochs, loss, 'bo', label='Training loss')
-    plt.plot(epochs, val_loss, 'b', label='Validation loss')
+    plt.plot(epochs, loss, 'b-', label='Training loss')
+    plt.plot(epochs, val_loss, 'r-', label='Validation loss')
     plt.ylim(ymin=0)
     plt.title('Training and validation loss')
     plt.legend()
