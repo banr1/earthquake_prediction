@@ -147,7 +147,8 @@ def train_and_validate(float_data, dummy_col, target_length, train_period, val_p
         return
     model = find_class_by_name(args.model, [model_factory])().build_model(float_data,
                                                                           optimizer=optimizer_class(),
-                                                                          loss=args.loss)
+                                                                          loss=args.loss,
+                                                                          target_length=target_length)
     model.summary()
     callbacks = [ModelCheckpoint(filepath=args.log_dir + 'my_model.h5'),
                  ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10)]
@@ -176,6 +177,7 @@ def train_and_validate(float_data, dummy_col, target_length, train_period, val_p
     df_pred = pd.DataFrame(predict).T
     dummy_col = np.sort(dummy_col)
     df_pred.columns = dummy_col
+    df_pred.to_csv(args.log_dir + 'pred_{}.csv')
     print(df_pred)
     evaluate = model.evaluate_generator(test_gen,
                                         steps=test_steps,
