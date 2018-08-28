@@ -151,8 +151,8 @@ def train_and_validate(float_data, dummy_col, target_length, train_period, val_p
                                                                           target_length=target_length)
     model.summary()
     callbacks = [ModelCheckpoint(filepath=args.log_dir + 'my_model.h5'),
-                 ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10)]
-                 #TensorBoard(log_dir=args.log_dir + 'tensorboard/', histogram_freq=1, embeddings_freq=1)
+                 ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10),
+                 TensorBoard(log_dir=args.log_dir + 'tensorboard/')]
     history = model.fit_generator(train_gen,
                                   steps_per_epoch=train_steps,
                                   epochs=args.epochs,
@@ -173,12 +173,13 @@ def train_and_validate(float_data, dummy_col, target_length, train_period, val_p
     predict = model.predict_generator(test_gen,
                                       steps=test_steps,
                                       verbose=1)
-    predict = predict.sum(axis=0)
+    predict = predict[-92:][:].sum(axis=0)
     df_pred = pd.DataFrame(predict).T
     dummy_col = np.sort(dummy_col)
     df_pred.columns = dummy_col
     df_pred.to_csv(args.log_dir + 'pred_{}.csv')
     print(df_pred)
+    print(df_pred.sum(axis=1))
     evaluate = model.evaluate_generator(test_gen,
                                         steps=test_steps,
                                         verbose=1)

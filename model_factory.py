@@ -17,7 +17,7 @@ class SimpleRNNmodel:
     def build_model(self, float_data, optimizer, loss, target_length):
         model = Sequential()
         model.add(layers.SimpleRNN(32,
-                                   activation='tanh',
+                                   activation='relu',
                                    input_shape=(None, float_data.shape[-1])))
         model.add(layers.Dense(target_length, activation='relu'))
         model.compile(optimizer=optimizer, loss=loss)
@@ -68,7 +68,7 @@ class StackingLSTMmodel:
     def build_model(self, float_data, optimizer, loss, target_length):
         model = Sequential()
         model.add(layers.LSTM(32,
-                              activation='tanh', 
+                              activation='tanh',
                               dropout=0.1,
                               recurrent_dropout=0.5,
                               return_sequences=True,
