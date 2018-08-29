@@ -13,6 +13,7 @@ import model_factory
 
 if __name__ == '__main__':
     date_format = '%Y-%m-%d'
+    np.random.seed(42)
 
 def strptime(str):
     return datetime.datetime.strptime(str, date_format)
@@ -27,15 +28,15 @@ def get_period(start_day, split_day_1, split_day_2, end_day):
     test_start = split_day_2
     test_end = end_day
     test_period = (test_end - test_start).days + 1
-    print('train period: {} ~ {} ({}days)'.format(train_start.strftime(date_format),
-                                                  train_end.strftime(date_format),
-                                                  train_period))
-    print('validate period: {} ~ {} ({}days)'.format(val_start.strftime(date_format),
-                                                     val_end.strftime(date_format),
-                                                     val_period))
-    print('test period: {} ~ {} ({}days)'.format(test_start.strftime(date_format),
-                                                 test_end.strftime(date_format),
-                                                 test_period))
+    print('train    period: {} ~ {} ({:0=4}days)'.format(train_start.strftime(date_format),
+                                                         train_end.strftime(date_format),
+                                                         train_period))
+    print('validate period: {} ~ {} ({:0=4}days)'.format(val_start.strftime(date_format),
+                                                         val_end.strftime(date_format),
+                                                         val_period))
+    print('test     period: {} ~ {} ({:0=4}days)'.format(test_start.strftime(date_format),
+                                                         test_end.strftime(date_format),
+                                                         test_period))
     return train_period, val_period, test_period
 
 def find_class_by_name(name, modules):
@@ -82,8 +83,7 @@ def get_daily_data(df, start, end, dummy_col):
     df = df[['time', 'latlon']]
     df = pd.get_dummies(df, columns=['latlon'], prefix='', prefix_sep='')
     col = pd.DataFrame(columns=dummy_col)
-    df = df.merge(col, how='outer')
-    df = df.sort_index(axis=1)
+    df = pd.concat([col, df], join='outer') #以前は、pd.merge(col, df, how='outer') --> df.sort_index(axis=1)
     df = df.fillna(0)
     df = df.groupby('time').sum()
     df = df[start: end] #終了日も含む
@@ -93,30 +93,43 @@ def get_daily_data(df, start, end, dummy_col):
     df = df.astype(int)
     return df
 
-def scaling(float_data, end_idx):  #min-max scaling
+def minmax_scaling(float_data, end_idx):
     max = float_data[:end_idx].max(axis=(0,1))
     print("max:{}".format(max))
     float_data /= max
     return float_data
 
-def generator(data, lookback, min_idx, max_idx, batch_size, target_length):
+def pseudo_standarization(float_data, end_idx):
+    mean = 0
+    std = float_data[:end_idx].std(axis=(0,1))
+    print('mean:{}, std:{}'.format(mean, std))
+    float_data = (float_data - mean) / std
+    return float_data, mean, std
+
+def destandarization(float_data, mean, std):
+    return float_data * std + mean
+
+def generator(data, lookback, min_idx, max_idx, batch_size, target_length, shuffle=False):
     if max_idx is None:
         max_idx = len(data) - 1
     i = min_idx + lookback
     while 1:
-        if i + batch_size >= max_idx:
-            i = min_idx + lookback
-        rows = np.arange(i, min(i + batch_size, max_idx))
-        i += len(rows)
+        if shuffle:
+            rows = np.random.randint(min_idx + lookback, max_idx, size=batch_size)
+        else:
+            if i + batch_size >= max_idx:
+                i = min_idx + lookback
+            rows = np.arange(i, min(i + batch_size, max_idx))
+            i += len(rows)
         samples = np.zeros((len(rows), lookback, data.shape[-1]))
         targets = np.zeros((len(rows), target_length))
         for j, row in enumerate(rows):
             idxs = range(rows[j] - lookback, rows[j])
-            samples[j] = data[idxs][:]
+            samples[j] = data[idxs]
             targets[j] = data[rows[j]][-target_length:]
         yield samples, targets
 
-def train_and_validate(float_data, dummy_col, target_length, train_period, val_period, test_period):
+def train_and_validate(float_data, dummy_col, target_length, train_period, val_period, test_period, mean, std):
     lookback = args.lookback
     batch_size = args.batch_size
     optimizer_class = find_class_by_name(args.optimizer, [keras.optimizers])
@@ -125,7 +138,8 @@ def train_and_validate(float_data, dummy_col, target_length, train_period, val_p
                           min_idx=0,
                           max_idx=train_period,
                           batch_size=batch_size,
-                          target_length=target_length)
+                          target_length=target_length,
+                          shuffle=args.train_shuffle)
     val_gen = generator(float_data,
                         lookback=lookback,
                         min_idx=train_period + 1,
@@ -141,20 +155,19 @@ def train_and_validate(float_data, dummy_col, target_length, train_period, val_p
     train_steps = (train_period - lookback) // batch_size
     val_steps = (val_period - 1 - lookback) // batch_size
     test_steps = (len(float_data) - (train_period + val_period + 1) - lookback) // batch_size
-    print(train_steps, val_steps, test_steps)
-    if args.model == 'NaiveModel':
-        model = find_class_by_name(args.model, [model_factory])().build_model(val_gen, val_steps, target_length)
-        return
     model = find_class_by_name(args.model, [model_factory])().build_model(float_data,
+                                                                          lookback=lookback,
+                                                                          batch_size=batch_size,
                                                                           optimizer=optimizer_class(),
                                                                           loss=args.loss,
+                                                                          stateful=args.stateful, 
                                                                           target_length=target_length)
     model.summary()
     callbacks = [ModelCheckpoint(filepath=args.log_dir + 'my_model.h5'),
                  ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10),
                  TensorBoard(log_dir=args.log_dir + 'tensorboard/')]
     history = model.fit_generator(train_gen,
-                                  steps_per_epoch=train_steps,
+                                  steps_per_epoch=train_steps // args.train_step_ratio,
                                   epochs=args.epochs,
                                   validation_data=val_gen,
                                   validation_steps=val_steps,
@@ -170,20 +183,34 @@ def train_and_validate(float_data, dummy_col, target_length, train_period, val_p
     plt.title('Training and validation loss')
     plt.legend()
     plt.savefig(args.log_dir + 'loss_{}.png'.format(args.model))
-    predict = model.predict_generator(test_gen,
-                                      steps=test_steps,
-                                      verbose=1)
-    predict = predict[-92:][:].sum(axis=0)
-    df_pred = pd.DataFrame(predict).T
-    dummy_col = np.sort(dummy_col)
-    df_pred.columns = dummy_col
-    df_pred.to_csv(args.log_dir + 'pred_{}.csv')
-    print(df_pred)
-    print(df_pred.sum(axis=1))
-    evaluate = model.evaluate_generator(test_gen,
-                                        steps=test_steps,
-                                        verbose=1)
-    print(evaluate)
+    pred = model.predict_generator(test_gen,
+                                   steps=test_steps,
+                                   verbose=1)
+    pred = pred[-92:, :]
+    naive_pred = float_data[-549: -457, -259:]
+    true = float_data[-92:, -259:]
+    pred = destandarization(pred, mean, std)
+    naive_pred = destandarization(naive_pred, mean, std)
+    true = destandarization(true, mean, std)
+    df_pred = pd.DataFrame(pred).sum(axis=0)
+    df_naive_pred = pd.DataFrame(naive_pred).sum(axis=0)
+    df_true = pd.DataFrame(true).sum(axis=0)
+    df_eval = pd.concat([df_naive_pred, df_pred, df_true], axis=1)
+    df_eval.columns = ['na_pred', 'pred', 'true']
+    df_eval['na_eval'] = np.abs(df_eval['na_pred'] - df_eval['true'])
+    df_eval['eval'] = np.abs(df_eval['pred'] - df_eval['true'])
+    df_eval = df_eval.loc[:, ['true', 'pred', 'eval', 'na_pred', 'na_eval']]
+    arr_print = df_eval.sort_values(by='eval').values
+    arr_print = np.concatenate([arr_print, arr_print.sum(axis=0).reshape(1, -1)])
+    print(pd.DataFrame(arr_print[-20:]))
+    naive_eval = np.mean(df_eval['na_eval'])
+    eval = np.mean(df_eval['eval'])
+    print('[eval({})] {}:{:.5f}, Naivemodel:{:.5f}'.format(args.loss, args.model, eval, naive_eval))
+    df_pred.to_csv(args.log_dir + 'eval_{}.csv'.format(args.model, eval))
+    #evaluate = model.evaluate_generator(test_gen,
+    #                                    steps=test_steps,
+    #                                    verbose=1)
+    #print(evaluate)
 
 def main():
     start_day = strptime(args.start_day)
@@ -198,18 +225,21 @@ def main():
     df = pd.read_csv(csv_file, low_memory=False)
     df_m2 = df[df['magnitude'] >= 20]
     df_m2 = get_grid_data(df_m2)
-    latlon = df_m2['latlon'].unique()
+    latlon = np.sort(df_m2['latlon'].unique())
     df_m2 = get_daily_data(df_m2, start=args.start_day, end=args.end_day, dummy_col=latlon)
     df_m4 = df[df['magnitude'] >= 40]
     df_m4 = get_grid_data(df_m4)
     df_m4 = get_daily_data(df_m4, start=args.start_day, end=args.end_day, dummy_col=latlon)
     float_data_m2 = df_m2.values.astype(np.float64)
     float_data_m4 = df_m4.values.astype(np.float64)
-    float_data_m2 = scaling(float_data_m2, train_period)
-    float_data_m4 = scaling(float_data_m4, train_period)
+    float_data_m2, _, _ = pseudo_standarization(float_data_m2, train_period)
+    float_data_m4, mean, std = pseudo_standarization(float_data_m4, train_period)
+    plt.hist(float_data_m2[:train_period].sum(axis=0), bins=10)
+    plt.savefig('ignore_hist.png')
     target_length = float_data_m4.shape[1]
     float_data = np.hstack([float_data_m2, float_data_m4])
-    train_and_validate(float_data, latlon, target_length, train_period, val_period, test_period)
+    print('float_data shape: {}'.format(float_data.shape))
+    train_and_validate(float_data, latlon, target_length, train_period, val_period, test_period, mean, std)
     return
 
 if __name__ == '__main__':
