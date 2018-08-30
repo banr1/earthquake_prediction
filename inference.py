@@ -10,6 +10,7 @@ from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, TensorBoard
 
 from params import args
 import model_factory
+import low_level_losses
 
 if __name__ == '__main__':
     date_format = '%Y-%m-%d'
@@ -109,6 +110,15 @@ def pseudo_standarization(float_data, end_idx):
 def destandarization(float_data, mean, std):
     return float_data * std + mean
 
+def naive_evaluate(test_gen, test_steps, low_level_loss, target_length):
+    errors = []
+    for step in range(test_steps):
+        samples, targets = next(test_gen)
+        preds = samples[:, -1, -target_length:]
+        error = np.mean(low_level_loss(targets, preds))
+        errors.append(error)
+    return np.mean(errors)
+
 def generator(data, lookback, min_idx, max_idx, batch_size, target_length, shuffle=False):
     if max_idx is None:
         max_idx = len(data) - 1
@@ -160,7 +170,7 @@ def train_and_validate(float_data, dummy_col, target_length, train_period, val_p
                                                                           batch_size=batch_size,
                                                                           optimizer=optimizer_class(),
                                                                           loss=args.loss,
-                                                                          stateful=args.stateful, 
+                                                                          stateful=args.stateful,
                                                                           target_length=target_length)
     model.summary()
     callbacks = [ModelCheckpoint(filepath=args.log_dir + 'my_model.h5'),
@@ -183,6 +193,7 @@ def train_and_validate(float_data, dummy_col, target_length, train_period, val_p
     plt.title('Training and validation loss')
     plt.legend()
     plt.savefig(args.log_dir + 'loss_{}.png'.format(args.model))
+    low_level_loss = find_class_by_name(args.loss, [low_level_losses])
     pred = model.predict_generator(test_gen,
                                    steps=test_steps,
                                    verbose=1)
@@ -192,25 +203,27 @@ def train_and_validate(float_data, dummy_col, target_length, train_period, val_p
     pred = destandarization(pred, mean, std)
     naive_pred = destandarization(naive_pred, mean, std)
     true = destandarization(true, mean, std)
-    df_pred = pd.DataFrame(pred).sum(axis=0)
-    df_naive_pred = pd.DataFrame(naive_pred).sum(axis=0)
-    df_true = pd.DataFrame(true).sum(axis=0)
+    df_pred = pd.DataFrame(pred.sum(axis=0), index=dummy_col)
+    df_naive_pred = pd.DataFrame(naive_pred.sum(axis=0), index=dummy_col)
+    df_true = pd.DataFrame(true.sum(axis=0), index=dummy_col)
     df_eval = pd.concat([df_naive_pred, df_pred, df_true], axis=1)
     df_eval.columns = ['na_pred', 'pred', 'true']
-    df_eval['na_eval'] = np.abs(df_eval['na_pred'] - df_eval['true'])
-    df_eval['eval'] = np.abs(df_eval['pred'] - df_eval['true'])
-    df_eval = df_eval.loc[:, ['true', 'pred', 'eval', 'na_pred', 'na_eval']]
-    arr_print = df_eval.sort_values(by='eval').values
-    arr_print = np.concatenate([arr_print, arr_print.sum(axis=0).reshape(1, -1)])
-    print(pd.DataFrame(arr_print[-20:]))
-    naive_eval = np.mean(df_eval['na_eval'])
-    eval = np.mean(df_eval['eval'])
-    print('[eval({})] {}:{:.5f}, Naivemodel:{:.5f}'.format(args.loss, args.model, eval, naive_eval))
-    df_pred.to_csv(args.log_dir + 'eval_{}.csv'.format(args.model, eval))
-    #evaluate = model.evaluate_generator(test_gen,
-    #                                    steps=test_steps,
-    #                                    verbose=1)
-    #print(evaluate)
+    df_eval['na_eval'] = low_level_loss(df_eval['true'], df_eval['na_pred'])
+    df_eval['eval'] = low_level_loss(df_eval['true'], df_eval['pred'])
+    col_list = ['true', 'pred', 'eval', 'na_pred', 'na_eval']
+    df_eval = df_eval.loc[:, col_list]
+    df_eval = df_eval.sort_values(by='eval')
+    sr_sum = pd.Series(df_eval.sum(axis=0), index=col_list, name='sum')
+    sr_mean = pd.Series(df_eval.mean(axis=0), index=col_list, name='mean')
+    print('[evaluation (last 3month)]')
+    print(df_eval.sort_values(by='eval').append(sr_sum).append(sr_mean).tail(20))
+    df_eval = df_eval.append(sr_sum).append(sr_mean)
+    df_eval.to_csv(args.log_dir + 'eval_{}.csv'.format(args.model))
+    eval = model.evaluate_generator(test_gen,
+                                    steps=test_steps,
+                                    verbose=1)
+    naive_eval = naive_evaluate(test_gen, test_steps, low_level_loss, target_length)
+    print('[evaluation (all)]\n model: {}\n naive: {}'.format(eval, naive_eval))
 
 def main():
     start_day = strptime(args.start_day)
