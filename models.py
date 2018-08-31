@@ -2,7 +2,15 @@ import numpy as np
 from keras.models import Sequential
 from keras import layers
 
-class SimpleRNNmodel:
+def normalize(train_stds):
+    devide = len(train_stds)
+
+
+class Basemodel():
+    def __init__(self):
+        pass
+
+class SimpleRNNmodel(Basemodel):
     def build_model(self, float_data, lookback, batch_size, optimizer, loss, stateful, target_length):
         model = Sequential()
         if stateful:
@@ -19,7 +27,7 @@ class SimpleRNNmodel:
         model.compile(optimizer=optimizer, loss=loss)
         return model
 
-class GRUmodel:
+class GRUmodel(Basemodel):
     def build_model(self, float_data, lookback, batch_size, optimizer, loss, stateful, target_length):
         model = Sequential()
         if stateful:
@@ -36,7 +44,7 @@ class GRUmodel:
         model.compile(optimizer=optimizer, loss=loss)
         return model
 
-class StackingGRUmodel:
+class StackingGRUmodel(Basemodel):
     def build_model(self, float_data, lookback, batch_size, optimizer, loss, stateful, target_length):
         model = Sequential()
         if stateful:
@@ -63,7 +71,7 @@ class StackingGRUmodel:
         model.compile(optimizer=optimizer, loss=loss)
         return model
 
-class LSTMmodel:
+class LSTMmodel(Basemodel):
     def build_model(self, float_data, lookback, batch_size, optimizer, loss, stateful, target_length):
         model = Sequential()
         if stateful:
@@ -84,7 +92,7 @@ class LSTMmodel:
         model.compile(optimizer=optimizer, loss=loss)
         return model
 
-class StackingLSTMmodel:
+class StackingLSTMmodel(Basemodel):
     def build_model(self, float_data, lookback, batch_size, optimizer, loss, stateful, target_length):
         model = Sequential()
         if stateful:
