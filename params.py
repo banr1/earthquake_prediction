@@ -11,8 +11,8 @@ arg('--batch_size', type=int, default=30)
 arg('--train_shuffle', type=bool, default=False)
 arg('--optimizer', default='SGD')
     #'SGD', 'RMSprop', 'Adam', 'Adagrad', 'Adadelta', 'Nadam'
-arg('--loss', default='general_poisson')
-    #'mae', 'mse', 'poisson', 'general_poisson'
+arg('--loss', default='poisson')
+    #'mae', 'mse', 'poisson'
 arg('--stateful', type=bool, default=True)
 arg('--train_step_ratio', type=int, default=1)
 arg('--epochs', type=int, default=15)
