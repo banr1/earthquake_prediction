@@ -4,12 +4,14 @@ parser = argparse.ArgumentParser()
 arg = parser.add_argument
 
 arg('--model', default='SimpleRNNmodel')
-    #'SimpleRNNmodel', 'GRUmodel', 'StackingGRUmodel', 'LSTMmodel', 'StackingLSTMmodel'
+    #ex) 'SimpleRNNmodel', 'GRUmodel', 'StackedGRUmodel', 'LSTMmodel', 'StackedLSTMmodel'
 arg('--optimizer', default='SGD')
-    #'SGD', 'RMSprop', 'Adam', 'Adagrad', 'Adadelta', 'Nadam'
+    #ex) 'SGD', 'RMSprop', 'Adam', 'Adagrad', 'Adadelta', 'Nadam'
 arg('--loss', default='general_poisson')
-    #'mae', 'mse', 'poisson', 'general_poisson'
+    #ex) 'mae', 'mse', 'poisson', 'general_poisson'
 arg('--stateful', type=bool, default=True)
+arg('--dropouts', default='0.')
+arg('--recurrent_dropouts', default='0.')
 arg('--lookback', type=int, default=365)
 arg('--batch_size', type=int, default=31)
 arg('--epochs', type=int, default=15)

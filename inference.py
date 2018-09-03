@@ -23,6 +23,8 @@ if __name__ == '__main__':
     lookback = args.lookback
     batch_size = args.batch_size
     epochs = args.epochs
+    dropouts = args.dropouts
+    recurrent_dropouts = args.recurrent_dropouts
     train_shuffle = args.train_shuffle
     train_step_ratio = args.train_step_ratio
     start_day_str = args.start_day
@@ -213,7 +215,9 @@ def main():
                                     optimizer=optimizer,
                                     loss=loss,
                                     stateful=stateful,
-                                    target_length=target_length)
+                                    target_length=target_length,
+                                    dropouts=[float(i) for i in dropouts.split(',')],
+                                    recurrent_dropouts=[float(i) for i in recurrent_dropouts.split(',')])
     model.summary()
     print('optimizer: {}\nloss: {}\n'.format(optimizer_name, loss_name))
     callbacks = []
