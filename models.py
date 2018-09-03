@@ -16,7 +16,7 @@ class SimpleRNNmodel(Basemodel):
         if stateful:
             input = Input(batch_shape=(batch_size, lookback, float_data.shape[-1]))
         else:
-            input = Input(batch_shape=(None, float_data.shape[-1]))
+            input = Input(shape=(None, float_data.shape[-1]))
         x = layers.SimpleRNN(32, activation='relu', stateful=stateful,
                              dropout=dropouts[0], recurrent_dropout=recurrent_dropouts[0])(input)
         output = layers.Dense(target_length, activation='relu')(x)
@@ -30,7 +30,7 @@ class GRUmodel(Basemodel):
         if stateful:
             input = Input(batch_shape=(batch_size, lookback, float_data.shape[-1]))
         else:
-            input = Input(batch_shape=(None, float_data.shape[-1]))
+            input = Input(shape=(None, float_data.shape[-1]))
         x = layers.GRU(32, activation='tanh', stateful=stateful,
                        dropout=dropouts[0], recurrent_dropout=recurrent_dropouts[0])(input)
         output = layers.Dense(target_length, activation='relu')(x)
@@ -44,7 +44,7 @@ class LSTMmodel(Basemodel):
         if stateful:
             input = Input(batch_shape=(batch_size, lookback, float_data.shape[-1]))
         else:
-            input = Input(batch_shape=(None, float_data.shape[-1]))
+            input = Input(shape=(None, float_data.shape[-1]))
         x = layers.LSTM(32, activation='tanh', stateful=stateful,
                         dropout=dropouts[0], recurrent_dropout=recurrent_dropouts[0])(input)
         output = layers.Dense(target_length, activation='relu')(x)
@@ -58,7 +58,7 @@ class StackedGRUmodel(Basemodel):
         if stateful:
             input = Input(batch_shape=(batch_size, lookback, float_data.shape[-1]))
         else:
-            input = Input(batch_shape=(None, float_data.shape[-1]))
+            input = Input(shape=(None, float_data.shape[-1]))
         x = layers.GRU(32, activation='tanh', stateful=stateful, return_state=True,
                        dropout=dropouts[0], recurrent_dropout=recurrent_dropouts[0])(input)
         x = layers.GRU(64, activation='relu', stateful=stateful, return_state=False,
@@ -74,7 +74,7 @@ class StackedLSTMmodel(Basemodel):
         if stateful:
             input = Input(batch_shape=(batch_size, lookback, float_data.shape[-1]))
         else:
-            input = Input(batch_shape=(None, float_data.shape[-1]))
+            input = Input(shape=(None, float_data.shape[-1]))
         x = layers.LSTM(32, activation='tanh', stateful=stateful, return_state=True,
                         dropout=dropouts[0], recurrent_dropout=recurrent_dropouts[0])(input)
         x = layers.LSTM(64, activation='relu', stateful=stateful, return_state=False,
