@@ -11,7 +11,6 @@ from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, TensorBoard
 from params import args
 import models
 import losses
-import low_level_losses
 
 if __name__ == '__main__':
     date_format = '%Y-%m-%d'
@@ -27,6 +26,7 @@ if __name__ == '__main__':
     recurrent_dropouts = args.recurrent_dropouts
     train_shuffle = args.train_shuffle
     train_step_ratio = args.train_step_ratio
+    naive_period = args.naive_period
     start_day_str = args.start_day
     split_day_1_str = args.split_day_1
     split_day_2_str = args.split_day_2
@@ -127,12 +127,12 @@ def normalization(float_data, end_idx):
 def denormalization(float_data, mean, std):
     return float_data * std + mean
 
-def naive_evaluate(test_gen, test_steps, low_level_loss, target_length):
+def naive_evaluate(test_gen, test_steps, pre_mean_loss, target_length, naive_period):
     errors = []
     for step in range(test_steps):
         samples, targets = next(test_gen)
-        preds = samples[:, -1, -target_length:]
-        error = np.mean(low_level_loss(targets, preds))
+        preds = samples[:, -naive_period, -target_length:]
+        error = np.mean(pre_mean_loss(targets, preds))
         errors.append(error)
     return np.mean(errors)
 
@@ -185,7 +185,7 @@ def main():
     print('float_data shape: {}'.format(float_data.shape))
     optimizer = find_class_by_name(optimizer_name, [keras.optimizers])()
     loss = find_class_by_name(loss_name, [losses, keras.losses])
-    low_level_loss = find_class_by_name(loss_name, [low_level_losses])
+    pre_mean_loss = find_class_by_name(loss_name.replace('mean_', ''), [losses])
     train_gen = generator(float_data,
                           lookback=lookback,
                           min_idx=0,
@@ -250,7 +250,7 @@ def main():
     eval = model.evaluate_generator(test_gen,
                                     steps=test_steps,
                                     verbose=1)
-    naive_eval = naive_evaluate(test_gen, test_steps, low_level_loss, target_length)
+    naive_eval = naive_evaluate(test_gen, test_steps, pre_mean_loss, target_length, naive_period)
     pred = pred[-92:, :]
     naive_pred = float_data[-549: -457, -259:]
     true = float_data[-92:, -259:]
@@ -262,8 +262,8 @@ def main():
     df_true = pd.DataFrame(true.sum(axis=0), index=latlon)
     df_eval = pd.concat([df_naive_pred, df_pred, df_true], axis=1)
     df_eval.columns = ['na_pred', 'pred', 'true']
-    df_eval['na_eval'] = low_level_loss(df_eval['true'], df_eval['na_pred'])
-    df_eval['eval'] = low_level_loss(df_eval['true'], df_eval['pred'])
+    df_eval['na_eval'] = pre_mean_loss(df_eval['true'], df_eval['na_pred'])
+    df_eval['eval'] = pre_mean_loss(df_eval['true'], df_eval['pred'])
     col_list = ['true', 'pred', 'eval', 'na_pred', 'na_eval']
     df_eval = df_eval.loc[:, col_list]
     sr_sum = pd.Series(df_eval.sum(axis=0), index=col_list, name='sum')

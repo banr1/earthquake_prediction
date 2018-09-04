@@ -8,8 +8,8 @@ arg('--model', default='SimpleRNNmodel')
     #ex) 'SimpleRNNmodel', 'GRUmodel', 'StackedGRUmodel', 'LSTMmodel', 'StackedLSTMmodel'
 arg('--optimizer', default='SGD')
     #ex) 'SGD', 'RMSprop', 'Adam', 'Adagrad', 'Adadelta', 'Nadam'
-arg('--loss', default='general_poisson')
-    #ex) 'mae', 'mse', 'poisson', 'general_poisson'
+arg('--loss', default='mean_poisson_log_likelihood')
+    #ex) 'mean_squared_error', 'mean_absolute_error', 'mean_poisson_log_likelihood'
 arg('--stateful', type=strtobool, default='True')
 arg('--dropouts', default='0.')
 arg('--recurrent_dropouts', default='0.')
@@ -18,6 +18,7 @@ arg('--batch_size', type=int, default=31)
 arg('--epochs', type=int, default=15)
 arg('--train_shuffle', type=strtobool, default='False')
 arg('--train_step_ratio', type=int, default=1)
+arg('--naive_period', type=int, default=1)
 arg('--start_day', default='1998-02-01')
 arg('--split_day_1', default='2010-02-01')
 arg('--split_day_2', default='2014-10-01')
