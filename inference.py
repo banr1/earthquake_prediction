@@ -22,21 +22,18 @@ if __name__ == '__main__':
     lookback = args.lookback
     batch_size = args.batch_size
     epochs = args.epochs
+    num_layers = args.num_layers
     dropouts = args.dropouts
     recurrent_dropouts = args.recurrent_dropouts
     train_shuffle = args.train_shuffle
-    train_step_ratio = args.train_step_ratio
     naive_period = args.naive_period
-    start_day_str = args.start_day
-    split_day_1_str = args.split_day_1
-    split_day_2_str = args.split_day_2
-    end_day_str = args.end_day
+    start_day = args.start_day
+    split_day_1 = args.split_day_1
+    split_day_2 = args.split_day_2
+    end_day = args.end_day
     input_raw_dir = args.input_raw_dir
     input_preprocessed_dir = args.input_preprocessed_dir
     log_dir = args.log_dir
-
-def strptime(str):
-    return datetime.datetime.strptime(str, date_format)
 
 def get_period(start_day, split_day_1, split_day_2, end_day):
     train_start = start_day
@@ -98,6 +95,8 @@ def get_grid_data(df):
     return df
 
 def get_daily_data(df, start, end, dummy_col):
+    start = str(start)
+    end = str(end)
     df['time'] = df['year'].astype(str) + '-' + df['month'].astype(str) + '-' + df['day'].astype(str)
     df['time'] = pd.to_datetime(df['time'])
     df = df[['time', 'latlon']]
@@ -112,11 +111,6 @@ def get_daily_data(df, start, end, dummy_col):
     df = df.fillna(0)
     df = df.astype(int)
     return df
-
-def minmax_scaling(float_data, end_idx):
-    max = float_data[:end_idx].max(axis=(0,1))
-    float_data /= max
-    return float_data
 
 def normalization(float_data, end_idx):
     mean = 0
@@ -157,23 +151,20 @@ def generator(data, lookback, min_idx, max_idx, batch_size, target_length, shuff
         yield samples, targets
 
 def main():
-    start_day = strptime(start_day_str)
-    split_day_1 = strptime(split_day_1_str)
-    split_day_2 = strptime(split_day_2_str)
-    end_day = strptime(end_day_str)
     train_period, val_period, test_period = get_period(start_day, split_day_1, split_day_2, end_day)
     raw_files = sorted(glob.glob(input_raw_dir + 'h????'))
     csv_file = input_preprocessed_dir + 'df.csv'
     if not os.path.exists(csv_file):
         raw_to_csv(raw_files, csv_file)
+
     df = pd.read_csv(csv_file, low_memory=False)
     df_m2 = df[df['magnitude'] >= 20]
     df_m2 = get_grid_data(df_m2)
     latlon = np.sort(df_m2['latlon'].unique())
-    df_m2 = get_daily_data(df_m2, start=start_day_str, end=end_day_str, dummy_col=latlon)
+    df_m2 = get_daily_data(df_m2, start=start_day, end=end_day, dummy_col=latlon)
     df_m4 = df[df['magnitude'] >= 40]
     df_m4 = get_grid_data(df_m4)
-    df_m4 = get_daily_data(df_m4, start=start_day_str, end=end_day_str, dummy_col=latlon)
+    df_m4 = get_daily_data(df_m4, start=start_day, end=end_day, dummy_col=latlon)
     float_data_m2 = df_m2.values.astype(np.float64)
     float_data_m4 = df_m4.values.astype(np.float64)
     float_data_m2, _, _ = normalization(float_data_m2, train_period)
@@ -183,9 +174,11 @@ def main():
     target_length = float_data_m4.shape[1]
     float_data = np.hstack([float_data_m2, float_data_m4])
     print('float_data shape: {}'.format(float_data.shape))
+
     optimizer = find_class_by_name(optimizer_name, [keras.optimizers])()
     loss = find_class_by_name(loss_name, [losses, keras.losses])
     pre_mean_loss = find_class_by_name(loss_name.replace('mean_', ''), [losses])
+
     train_gen = generator(float_data,
                           lookback=lookback,
                           min_idx=0,
@@ -205,9 +198,11 @@ def main():
                          max_idx=None,
                          batch_size=batch_size,
                          target_length=target_length)
+
     train_steps = (train_period - lookback) // batch_size
     val_steps = (val_period - 1 - lookback) // batch_size
     test_steps = (len(float_data) - (train_period + val_period + 1) - lookback) // batch_size
+
     model_class = find_class_by_name(model_name, [models])()
     model = model_class.build_model(float_data,
                                     lookback=lookback,
@@ -216,22 +211,25 @@ def main():
                                     loss=loss,
                                     stateful=stateful,
                                     target_length=target_length,
-                                    dropouts=[float(i) for i in dropouts.split(',')],
-                                    recurrent_dropouts=[float(i) for i in recurrent_dropouts.split(',')])
+                                    num_layers=num_layers,
+                                    dropouts=dropouts,
+                                    recurrent_dropouts=recurrent_dropouts)
     model.summary()
     print('optimizer: {}\nloss: {}\n'.format(optimizer_name, loss_name))
-    callbacks = []
-    callbacks.append(ModelCheckpoint(filepath=log_dir + 'my_model.h5'))
-    callbacks.append(ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10))
-    callbacks.append(TensorBoard(log_dir=log_dir + 'tensorboard/'))
+    callbacks = [
+        ModelCheckpoint(filepath=log_dir + 'my_model.h5'),
+        ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10),
+        TensorBoard(log_dir=log_dir + 'tensorboard/')
+        ]
     print('【training】')
     history = model.fit_generator(train_gen,
-                                  steps_per_epoch=train_steps // train_step_ratio,
+                                  steps_per_epoch=train_steps,
                                   epochs=epochs,
                                   validation_data=val_gen,
                                   validation_steps=val_steps,
                                   callbacks=callbacks,
                                   verbose=1)
+
     loss = history.history['loss']
     val_loss = history.history['val_loss']
     epochs_range = range(len(loss))
@@ -242,6 +240,7 @@ def main():
     plt.title('Training and validation loss')
     plt.legend()
     plt.savefig(log_dir + 'loss_{}.png'.format(model_name))
+
     print('【prediction】')
     pred = model.predict_generator(test_gen,
                                    steps=test_steps,
@@ -251,6 +250,7 @@ def main():
                                     steps=test_steps,
                                     verbose=1)
     naive_eval = naive_evaluate(test_gen, test_steps, pre_mean_loss, target_length, naive_period)
+
     pred = pred[-92:, :]
     naive_pred = float_data[-549: -457, -259:]
     true = float_data[-92:, -259:]
