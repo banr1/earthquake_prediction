@@ -1,11 +1,14 @@
+import tensorflow as tf
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
 import glob
 import datetime
+import random
 from PIL import Image
 import keras.optimizers
+import keras.backend as K
 from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, TensorBoard
 
 from params import args
@@ -13,8 +16,6 @@ import models
 import losses
 
 if __name__ == '__main__':
-    date_format = '%Y-%m-%d'
-    np.random.seed(42)
     model_name = args.model
     optimizer_name = args.optimizer
     loss_name = args.loss
@@ -26,6 +27,7 @@ if __name__ == '__main__':
     dropouts = args.dropouts
     recurrent_dropouts = args.recurrent_dropouts
     train_shuffle = args.train_shuffle
+    random_seed = args.random_seed
     naive_period = args.naive_period
     start_day = args.start_day
     split_day_1 = args.split_day_1
@@ -34,6 +36,11 @@ if __name__ == '__main__':
     input_raw_dir = args.input_raw_dir
     input_preprocessed_dir = args.input_preprocessed_dir
     log_dir = args.log_dir
+    date_format = '%Y-%m-%d'
+    os.environ['PYTHONHASHSEED'] = '0'
+    np.random.seed(random_seed)
+    random.seed(random_seed)
+    tf.set_random_seed(random_seed)
 
 def get_period(start_day, split_day_1, split_day_2, end_day):
     train_start = start_day
@@ -151,6 +158,13 @@ def generator(data, lookback, min_idx, max_idx, batch_size, target_length, shuff
         yield samples, targets
 
 def main():
+    session_conf = tf.ConfigProto(
+        intra_op_parallelism_threads=1,
+        inter_op_parallelism_threads=1
+    )
+    sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)
+    K.set_session(sess)
+
     train_period, val_period, test_period = get_period(start_day, split_day_1, split_day_2, end_day)
     raw_files = sorted(glob.glob(input_raw_dir + 'h????'))
     csv_file = input_preprocessed_dir + 'df.csv'
