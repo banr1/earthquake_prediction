@@ -36,6 +36,7 @@ if __name__ == '__main__':
     input_raw_dir = args.input_raw_dir
     input_preprocessed_dir = args.input_preprocessed_dir
     log_dir = args.log_dir
+    record = args.record
     date_format = '%Y-%m-%d'
     os.environ['PYTHONHASHSEED'] = '0'
     np.random.seed(random_seed)
@@ -288,6 +289,20 @@ def main():
     df_eval = df_eval.append(sr_sum).append(sr_max).append(sr_mean)
     df_eval.to_csv(log_dir + 'eval_{}.csv'.format(model_name))
     print('【result (all)】\n model: {}\n naive: {}'.format(eval, naive_eval))
+
+    if not record:
+        return
+    now = datetime.datetime.now().strftime(date_format)
+    record_file = log_dir + 'record.csv'
+    if os.path.exists(record_file):
+        with open(log_dir + 'record.csv', 'a') as f:
+            f.write('\n{},{},{},{},{},{},{},{},{},{}'
+                    .format(now,eval,model_name,optimizer_name,batch_size,epochs,num_layers,dropouts,recurrent_dropouts,stateful))
+    else:
+        with open(log_dir + 'record.csv', 'a') as f:
+            f.write('date,score,model,optimizer,batch_size,epochs,num_layers,dropouts,recurrent_dropouts,stateful')
+            f.write('\n{},{},{},{},{},{},{},{},{},{}'
+                    .format(now,eval,model_name,optimizer_name,batch_size,epochs,num_layers,dropouts,recurrent_dropouts,stateful))
 
 if __name__ == '__main__':
     main()
