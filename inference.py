@@ -266,9 +266,10 @@ def main():
                                     verbose=1)
     naive_eval = naive_evaluate(test_gen, test_steps, pre_mean_loss, target_length, naive_period)
 
-    pred = pred[-92:, :]
-    naive_pred = float_data[-549: -457, -259:]
-    true = float_data[-92:, -259:]
+    pred_days = 92
+    pred = pred[-pred_days:, :]
+    naive_pred = float_data[-(2*pred_days + naive_period): -(pred_days + naive_period), -259:]
+    true = float_data[-pred_days:, -259:]
     pred = denormalization(pred, mean=0, std=std)
     naive_pred = denormalization(naive_pred, mean=0, std=std)
     true = denormalization(true, mean=0, std=std)
