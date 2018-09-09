@@ -17,7 +17,7 @@ import losses
 
 if __name__ == '__main__':
     model_name = args.model
-    model_version - args.version
+    model_version = args.version
     optimizer_name = args.optimizer
     loss_name = args.loss
     stateful = args.stateful
@@ -301,14 +301,14 @@ def main():
     if os.path.exists(record_file):
         with open(log_dir + 'record.csv', 'a') as f:
             f.write('\n{},{},{}{},{},{},{},{},{},{},{}'
-                    .format(now,eval,model_name,model_version,optimizer_name,batch_size,epochs,
-                            num_layers,dropouts,recurrent_dropouts,stateful))
+                    .format(now, eval, model_name, model_version, optimizer_name, batch_size, epochs,
+                            num_layers, dropouts, recurrent_dropouts, stateful))
     else:
         with open(log_dir + 'record.csv', 'a') as f:
             f.write('date,score,model,optimizer,batch_size,epochs,num_layers,dropouts,recurrent_dropouts,stateful')
             f.write('\n{},{},{}{},{},{},{},{},{},{},{}'
-                    .format(now,eval,model_name,model_version,optimizer_name,batch_size,epochs,
-                            num_layers,dropouts,recurrent_dropouts,stateful))
+                    .format(now, eval, model_name, model_version, optimizer_name, batch_size, epochs,
+                            num_layers, dropouts, recurrent_dropouts, stateful))
 
 if __name__ == '__main__':
     main()
