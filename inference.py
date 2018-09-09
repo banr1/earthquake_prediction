@@ -121,15 +121,6 @@ def get_daily_data(df, start, end, dummy_col):
     df = df.astype(int)
     return df
 
-def normalization(float_data, end_idx):
-    mean = 0
-    std = float_data[:end_idx].std(axis=(0,1))
-    float_data = (float_data - mean) / std
-    return float_data, mean, std
-
-def denormalization(float_data, mean, std):
-    return float_data * std + mean
-
 def naive_evaluate(test_gen, test_steps, pre_mean_loss, target_length, naive_period):
     errors = []
     for step in range(test_steps):
@@ -183,8 +174,9 @@ def main():
     df_m4 = get_daily_data(df_m4, start=start_day, end=end_day, dummy_col=latlon)
     float_data_m2 = df_m2.values.astype(np.float64)
     float_data_m4 = df_m4.values.astype(np.float64)
-    float_data_m2, _, _ = normalization(float_data_m2, train_period)
-    float_data_m4, mean, std = normalization(float_data_m4, train_period)
+    max_m2 = float_data_m2.max(axis=(0,1))
+    max_m4 = float_data_m4.max(axis=(0,1))
+    float_data_m2 = float_data_m2 * max_m4 / max_m2
     plt.hist(float_data_m2[:train_period].sum(axis=0), bins=10)
     plt.savefig(log_dir + 'train_hist.png')
     target_length = float_data_m4.shape[1]
@@ -272,9 +264,6 @@ def main():
     pred = pred[-pred_days:, :]
     naive_pred = float_data[-(2*pred_days + naive_period): -(pred_days + naive_period), -259:]
     true = float_data[-pred_days:, -259:]
-    pred = denormalization(pred, mean=0, std=std)
-    naive_pred = denormalization(naive_pred, mean=0, std=std)
-    true = denormalization(true, mean=0, std=std)
     df_pred = pd.DataFrame(pred.sum(axis=0), index=latlon)
     df_naive_pred = pd.DataFrame(naive_pred.sum(axis=0), index=latlon)
     df_true = pd.DataFrame(true.sum(axis=0), index=latlon)
