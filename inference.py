@@ -9,7 +9,7 @@ import random
 from PIL import Image
 import keras.optimizers
 import keras.backend as K
-from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau, TensorBoard
+from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
 
 from params import args
 import models
@@ -234,7 +234,7 @@ def main():
     print('optimizer: {}\nloss: {}\n'.format(optimizer_name, loss_name))
     callbacks = [
         EarlyStopping(monitor='val_loss', patience=5, verbose=1),
-        ModelCheckpoint(filepath=log_dir + '{}{}.h5'.format(model_name, model_version),
+        ModelCheckpoint(filepath=log_dir + 'ckpt_{}{}.h5'.format(model_name, model_version),
                         monitor='val_loss', save_best_only=True, verbose=1),
         ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=1),
         TensorBoard(log_dir=log_dir + 'tensorboard/', batch_size=batch_size),
