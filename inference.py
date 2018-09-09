@@ -232,9 +232,10 @@ def main():
     model.summary()
     print('optimizer: {}\nloss: {}\n'.format(optimizer_name, loss_name))
     callbacks = [
-        ModelCheckpoint(filepath=log_dir + 'my_model.h5'),
-        ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10),
-        TensorBoard(log_dir=log_dir + 'tensorboard/')
+        EarlyStopping(monitor='val_loss', patience=5, verbose=1),
+        ModelCheckpoint(filepath=log_dir + 'my_model.h5', monitor='val_loss', save_best_only=True, verbose=1),
+        ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=1),
+        TensorBoard(log_dir=log_dir + 'tensorboard/', batch_size=batch_size),
         ]
     print('【training】')
     history = model.fit_generator(train_gen,
