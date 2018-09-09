@@ -216,9 +216,8 @@ def main():
                          target_length=target_length)
 
     train_steps = (train_period - lookback) // batch_size
-    val_steps = (val_period - 1 - lookback) // batch_size
-    test_steps = (len(float_data) - (train_period + val_period + 1) - lookback) // batch_size
-
+    val_steps = (val_period - lookback) // batch_size
+    test_steps = (len(float_data) - (train_period + val_period) - lookback) // batch_size
     model_class = find_class_by_name(model_name, [models])()
     model = model_class.build_model(float_data,
                                     lookback=lookback,
