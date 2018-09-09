@@ -23,6 +23,7 @@ arg = parser.add_argument
 
 arg('--model', default='SimpleRNNmodel')
     #ex) 'SimpleRNNmodel', 'GRUmodel', 'StackedGRUmodel', 'LSTMmodel', 'StackedLSTMmodel'
+arg('--version', type=int, default='99')
 arg('--optimizer', default='SGD')
     #ex) 'SGD', 'RMSprop', 'Adam', 'Adagrad', 'Adadelta', 'Nadam'
 arg('--loss', default='mean_poisson_log_likelihood')

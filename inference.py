@@ -17,6 +17,7 @@ import losses
 
 if __name__ == '__main__':
     model_name = args.model
+    model_version - args.version
     optimizer_name = args.optimizer
     loss_name = args.loss
     stateful = args.stateful
@@ -233,7 +234,8 @@ def main():
     print('optimizer: {}\nloss: {}\n'.format(optimizer_name, loss_name))
     callbacks = [
         EarlyStopping(monitor='val_loss', patience=5, verbose=1),
-        ModelCheckpoint(filepath=log_dir + 'my_model.h5', monitor='val_loss', save_best_only=True, verbose=1),
+        ModelCheckpoint(filepath=log_dir + '{}{}.h5'.format(model_name, model_version),
+                        monitor='val_loss', save_best_only=True, verbose=1),
         ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=1),
         TensorBoard(log_dir=log_dir + 'tensorboard/', batch_size=batch_size),
         ]
@@ -255,7 +257,7 @@ def main():
     plt.ylim(ymin=0)
     plt.title('Training and validation loss')
     plt.legend()
-    plt.savefig(log_dir + 'loss_{}.png'.format(model_name))
+    plt.savefig(log_dir + 'loss_{}{}.png'.format(model_name, model_version))
 
     print('【prediction】')
     pred = model.predict_generator(test_gen,
@@ -289,7 +291,7 @@ def main():
     print('【result (last 3month)】')
     print(df_eval.sort_values(by='eval').append(sr_sum).append(sr_max).append(sr_mean).tail(20))
     df_eval = df_eval.append(sr_sum).append(sr_max).append(sr_mean)
-    df_eval.to_csv(log_dir + 'eval_{}.csv'.format(model_name))
+    df_eval.to_csv(log_dir + 'eval_{}{}.csv'.format(model_name, model_version))
     print('【result (all)】\n model: {}\n naive: {}'.format(eval, naive_eval))
 
     if not record:
@@ -298,13 +300,15 @@ def main():
     record_file = log_dir + 'record.csv'
     if os.path.exists(record_file):
         with open(log_dir + 'record.csv', 'a') as f:
-            f.write('\n{},{},{},{},{},{},{},{},{},{}'
-                    .format(now,eval,model_name,optimizer_name,batch_size,epochs,num_layers,dropouts,recurrent_dropouts,stateful))
+            f.write('\n{},{},{}{},{},{},{},{},{},{},{}'
+                    .format(now,eval,model_name,model_version,optimizer_name,batch_size,epochs,
+                            num_layers,dropouts,recurrent_dropouts,stateful))
     else:
         with open(log_dir + 'record.csv', 'a') as f:
             f.write('date,score,model,optimizer,batch_size,epochs,num_layers,dropouts,recurrent_dropouts,stateful')
-            f.write('\n{},{},{},{},{},{},{},{},{},{}'
-                    .format(now,eval,model_name,optimizer_name,batch_size,epochs,num_layers,dropouts,recurrent_dropouts,stateful))
+            f.write('\n{},{},{}{},{},{},{},{},{},{},{}'
+                    .format(now,eval,model_name,model_version,optimizer_name,batch_size,epochs,
+                            num_layers,dropouts,recurrent_dropouts,stateful))
 
 if __name__ == '__main__':
     main()
