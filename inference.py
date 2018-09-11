@@ -27,7 +27,6 @@ if __name__ == '__main__':
     num_layers = args.num_layers
     dropouts = args.dropouts
     recurrent_dropouts = args.recurrent_dropouts
-    train_shuffle = args.train_shuffle
     random_seed = args.random_seed
     naive_period = args.naive_period
     start_day = args.start_day
@@ -130,13 +129,11 @@ def naive_evaluate(test_gen, test_steps, pre_mean_loss, target_length, naive_per
         errors.append(error)
     return np.mean(errors)
 
-def generator(data, lookback, min_idx, max_idx, batch_size, target_length, shuffle=False):
+def generator(data, lookback, min_idx, max_idx, batch_size, target_length):
     if max_idx is None:
         max_idx = len(data) - 1
     i = min_idx + lookback
     while 1:
-        if shuffle:
-            rows = np.random.randint(min_idx + lookback, max_idx, size=batch_size)
         else:
             if i + batch_size >= max_idx:
                 i = min_idx + lookback
@@ -192,8 +189,7 @@ def main():
                           min_idx=0,
                           max_idx=train_period - 1,
                           batch_size=batch_size,
-                          target_length=target_length,
-                          shuffle=train_shuffle)
+                          target_length=target_length)
     val_gen = generator(float_data,
                         lookback=lookback,
                         min_idx=train_period,
