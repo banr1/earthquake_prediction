@@ -137,9 +137,9 @@ def generator(data, lookback, min_idx, max_idx, batch_size, target_length):
         max_idx = len(data) - 1
     i = min_idx + lookback
     while 1:
-        if i + batch_size >= max_idx:
+        if i + batch_size > max_idx + 1:
             i = min_idx + lookback
-        rows = np.arange(i, min(i + batch_size, max_idx))
+        rows = np.arange(i, min(i + batch_size, max_idx + 1))
         i += len(rows)
         samples = np.zeros((len(rows), lookback, data.shape[-1]))
         targets = np.zeros((len(rows), target_length))
