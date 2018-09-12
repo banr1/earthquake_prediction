@@ -43,6 +43,9 @@ if __name__ == '__main__':
     random.seed(random_seed)
     tf.set_random_seed(random_seed)
 
+def list_to_str(list):
+    return ' '.join(map(str, list))
+
 def get_period(start_day, split_day_1, split_day_2, end_day):
     train_start = start_day
     train_end = split_day_1 - datetime.timedelta(days=1)
@@ -281,17 +284,20 @@ def main():
         return
     now = datetime.datetime.now().strftime(date_format)
     record_file = log_dir + 'record.csv'
+    str_num_layers = list_to_str(num_layers)
+    str_dropouts = list_to_str(dropouts)
+    str_recurrent_dropouts = list_to_str(recurrent_dropouts)
     if os.path.exists(record_file):
         with open(log_dir + 'record.csv', 'a') as f:
-            f.write('\n{},{},{}{},{},{},{},{},{},{},{}'
-                    .format(now, eval, model_name, model_version, optimizer_name, batch_size, epochs,
-                            num_layers, dropouts, recurrent_dropouts, stateful))
+            f.write('{},{},{}{},{},{},{},{},{},{},{}\n'
+                    .format(now, eval, model_name, model_version, str_num_layers, optimizer_name,
+                            str_dropouts, str_recurrent_dropouts, epochs, batch_size, stateful))
     else:
         with open(log_dir + 'record.csv', 'a') as f:
-            f.write('date,score,model,optimizer,batch_size,epochs,num_layers,dropouts,recurrent_dropouts,stateful')
-            f.write('\n{},{},{}{},{},{},{},{},{},{},{}'
-                    .format(now, eval, model_name, model_version, optimizer_name, batch_size, epochs,
-                            num_layers, dropouts, recurrent_dropouts, stateful))
+            f.write('date,score,model,num_layers,optimizer,dropouts,recurrent_dropouts,epochs,batch_size,stateful\n')
+            f.write('{},{},{}{},{},{},{},{},{},{},{}\n'
+                    .format(now, eval, model_name, model_version, str_num_layers, optimizer_name,
+                            str_dropouts, str_recurrent_dropouts, epochs, batch_size, stateful))
 
 if __name__ == '__main__':
     main()
