@@ -24,7 +24,7 @@ if __name__ == '__main__':
     lookback = args.lookback
     batch_size = args.batch_size
     epochs = args.epochs
-    num_layers = args.num_layers
+    num_filters = args.num_filters
     dropouts = args.dropouts
     recurrent_dropouts = args.recurrent_dropouts
     random_seed = args.random_seed
@@ -217,7 +217,7 @@ def main():
                                     loss=loss,
                                     stateful=stateful,
                                     target_length=target_length,
-                                    num_layers=num_layers,
+                                    num_filters=num_filters,
                                     dropouts=dropouts,
                                     recurrent_dropouts=recurrent_dropouts)
     model.summary()
@@ -285,19 +285,19 @@ def main():
         return
     now = datetime.datetime.now().strftime(date_format)
     record_file = log_dir + 'record.csv'
-    str_num_layers = list_to_str(num_layers)
+    str_num_filters = list_to_str(num_filters)
     str_dropouts = list_to_str(dropouts)
     str_recurrent_dropouts = list_to_str(recurrent_dropouts)
     if os.path.exists(record_file):
         with open(log_dir + 'record.csv', 'a') as f:
             f.write('{},{},{}{},{},{},{},{},{},{},{}\n'
-                    .format(now, eval, model_name, model_version, str_num_layers, optimizer_name,
+                    .format(now, eval, model_name, model_version, str_num_filters, optimizer_name,
                             str_dropouts, str_recurrent_dropouts, epochs, batch_size, stateful))
     else:
         with open(log_dir + 'record.csv', 'a') as f:
-            f.write('date,score,model,num_layers,optimizer,dropouts,recurrent_dropouts,epochs,batch_size,stateful\n')
+            f.write('date,score,model,num_filters,optimizer,dropouts,recurrent_dropouts,epochs,batch_size,stateful\n')
             f.write('{},{},{}{},{},{},{},{},{},{},{}\n'
-                    .format(now, eval, model_name, model_version, str_num_layers, optimizer_name,
+                    .format(now, eval, model_name, model_version, str_num_filters, optimizer_name,
                             str_dropouts, str_recurrent_dropouts, epochs, batch_size, stateful))
 
 if __name__ == '__main__':

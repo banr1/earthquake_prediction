@@ -29,7 +29,7 @@ arg('--optimizer', default='SGD')
 arg('--loss', default='mean_poisson_log_likelihood')
     #ex) 'mean_squared_error', 'mean_absolute_error', 'mean_poisson_log_likelihood'
 arg('--stateful', type=boolian, default='True')
-arg('--num_layers', type=intlist, default='32')
+arg('--num_filters', type=intlist, default='32')
 arg('--dropouts', type=floatlist, default='0.')
 arg('--recurrent_dropouts', type=floatlist, default='0.')
 arg('--lookback', type=int, default='365')
