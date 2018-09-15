@@ -44,6 +44,7 @@ arg('--end_day', type=day, default='2016-01-31')
 arg('--input_raw_dir', default='../input/raw/')
 arg('--input_preprocessed_dir', default='../input/preprocessed/')
 arg('--log_dir', default='../log/')
+arg('--verbose', type=int, default='1')
 arg('--record', type=boolian, default='False')
 
 args = parser.parse_args()

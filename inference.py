@@ -36,6 +36,7 @@ if __name__ == '__main__':
     input_raw_dir = args.input_raw_dir
     input_preprocessed_dir = args.input_preprocessed_dir
     log_dir = args.log_dir
+    verbose = args.verbose
     record = args.record
     date_format = '%Y-%m-%d'
     os.environ['PYTHONHASHSEED'] = '0'
@@ -222,10 +223,10 @@ def main():
     model.summary()
     print('optimizer: {}\nloss: {}\n'.format(optimizer_name, loss_name))
     callbacks = [
-        EarlyStopping(monitor='val_loss', patience=5, verbose=1),
+        EarlyStopping(monitor='val_loss', patience=5, verbose=verbose),
         ModelCheckpoint(filepath=log_dir + 'ckpt_{}{}.h5'.format(model_name, model_version),
-                        monitor='val_loss', save_best_only=True, verbose=1),
-        ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=1),
+                        monitor='val_loss', save_best_only=True, verbose=verbose),
+        ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=verbose),
         TensorBoard(log_dir=log_dir + 'tensorboard/', batch_size=batch_size),
         ]
     print('【training】')
@@ -235,7 +236,7 @@ def main():
                                   validation_data=val_gen,
                                   validation_steps=val_steps,
                                   callbacks=callbacks,
-                                  verbose=1)
+                                  verbose=verbose)
 
     loss = history.history['loss']
     val_loss = history.history['val_loss']
@@ -251,11 +252,11 @@ def main():
     print('【prediction】')
     pred = model.predict_generator(test_gen,
                                    steps=test_steps,
-                                   verbose=1)
+                                   verbose=verbose)
     print('【evaluation】')
     eval = model.evaluate_generator(test_gen,
                                     steps=test_steps,
-                                    verbose=1)
+                                    verbose=verbose)
     naive_eval = naive_evaluate(test_gen, test_steps, pre_mean_loss, target_length, naive_period)
 
     pred_days = 92
