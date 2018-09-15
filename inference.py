@@ -96,11 +96,13 @@ def raw_to_csv(raw_files, csv_file):
                     csv.writelines(csv_line)
 
 def get_grid_data(df):
-    df = df[df['latitude'] >= 30]
-    df = df[df['latitude'] <= 46]
-    df = df[df['longitude'] >= 129]
-    df = df[df['longitude'] <= 147]
     df['latlon'] = df['latitude'].astype(str) + '-' + df['longitude'].astype(str)
+    df_area = pd.read_table(input_raw_dir + 'mainland.forecast.nodes.dat',
+                             names=('lon', 'lat'),
+                             delim_whitespace=True,)
+    df_area['latlon'] = df_area['lat'].astype(str).str[:2] + '-' + df_area['lon'].astype(str).str[:3]
+    area = list(df_area['latlon'].unique())
+    df = df[df['latlon'].isin(area)]
     df = df[['year', 'month', 'day', 'latlon']]
     df = df.set_index('latlon')
     df = df.reset_index()
@@ -261,8 +263,8 @@ def main():
 
     pred_days = 92
     pred = pred[-pred_days:, :]
-    naive_pred = float_data[-(2*pred_days + naive_period): -(pred_days + naive_period), -259:]
-    true = float_data[-pred_days:, -259:]
+    naive_pred = float_data[-(2*pred_days + naive_period): -(pred_days + naive_period), -99:]
+    true = float_data[-pred_days:, -99:]
     df_pred = pd.DataFrame(pred.sum(axis=0), index=latlon)
     df_naive_pred = pd.DataFrame(naive_pred.sum(axis=0), index=latlon)
     df_true = pd.DataFrame(true.sum(axis=0), index=latlon)
