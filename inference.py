@@ -22,6 +22,7 @@ if __name__ == '__main__':
     model_version = args.version
     optimizer_name = args.optimizer
     learning_rate = args.learning_rate
+    decay = args.decay
     loss_name = args.loss
     stateful = args.stateful
     lookback = args.lookback
@@ -215,7 +216,7 @@ def main():
     print('data shape: {}'.format(float_data.shape))
 
     lr = learning_rate if learning_rate else get_default_lr(optimizer_name)
-    optimizer = find_class_by_name(optimizer_name, [keras.optimizers])(lr=lr)
+    optimizer = find_class_by_name(optimizer_name, [keras.optimizers])(lr=lr, decay=decay)
     loss = find_class_by_name(loss_name, [losses, keras.losses])
     pre_mean_loss = find_class_by_name(loss_name.replace('mean_', ''), [losses])
 
@@ -352,15 +353,16 @@ def main():
     str_recurrent_dropouts = list_to_str(recurrent_dropouts)
     if os.path.exists(record_file):
         with open(log_dir + 'record.csv', 'a') as f:
-            f.write('{},{},{}{},{},{},{},{},{},{}\n'
-                    .format(now, eval, model_name, model_version, str_num_filters, optimizer_name, lr,
-                            str_dropouts, str_recurrent_dropouts, epochs))
+            f.write('{},{},{}{},{},{},{},{},{},{},{},{}\n'
+                    .format(now, md_eval, model_name, model_version, str_num_filters, optimizer_name, lr, decay,
+                            str_dropouts, str_recurrent_dropouts, epochs,random_seed))
     else:
         with open(log_dir + 'record.csv', 'a') as f:
-            f.write('date,score,model,num_filters,optimizer,learning_rate,dropouts,recurrent_dropouts,epochs,batch_size,stateful\n')
-            f.write('{},{},{}{},{},{},{},{},{},{}\n'
-                    .format(now, eval, model_name, model_version, str_num_filters, optimizer_name, lr,
-                            str_dropouts, str_recurrent_dropouts, epochs))
+            f.write('date,eval,model,filt,optm,lr,decay,drpout,r_drpout,epch,seed\n')
+            f.write('{},{},Naivemodel,None,None,None,None,None,None,None,None\n'.format(now, nv_eval))
+            f.write('{},{},{}{},{},{},{},{},{},{},{},{}\n'
+                    .format(now, md_eval, model_name, model_version, str_num_filters, optimizer_name, lr, decay,
+                            str_dropouts, str_recurrent_dropouts, epochs,random_seed))
 
 if __name__ == '__main__':
     main()
