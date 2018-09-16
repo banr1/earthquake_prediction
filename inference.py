@@ -19,6 +19,7 @@ if __name__ == '__main__':
     model_name = args.model
     model_version = args.version
     optimizer_name = args.optimizer
+    learning_rate = args.learning_rate
     loss_name = args.loss
     stateful = args.stateful
     lookback = args.lookback
@@ -46,6 +47,10 @@ if __name__ == '__main__':
 
 def list_to_str(list):
     return ' '.join(map(str, list))
+
+def get_default_lr(optimizer_name):
+    dict = {'SGD': 0.01, 'RMSprop':0.001, 'Adagrad': 0.01, 'Adadelta':1.0, 'Adam': 0.001, 'Nadam': 0.002}
+    return dict[optimizer_name]
 
 def get_period(start_day, split_day_1, split_day_2, end_day):
     train_start = start_day
@@ -185,7 +190,8 @@ def main():
     float_data = np.hstack([float_data_m2, float_data_m4])
     print('float_data shape: {}'.format(float_data.shape))
 
-    optimizer = find_class_by_name(optimizer_name, [keras.optimizers])()
+    lr = learning_rate if learning_rate else get_default_lr(optimizer_name)
+    optimizer = find_class_by_name(optimizer_name, [keras.optimizers])(lr=lr)
     loss = find_class_by_name(loss_name, [losses, keras.losses])
     pre_mean_loss = find_class_by_name(loss_name.replace('mean_', ''), [losses])
 
@@ -223,7 +229,7 @@ def main():
                                     dropouts=dropouts,
                                     recurrent_dropouts=recurrent_dropouts)
     model.summary()
-    print('optimizer: {}\nloss: {}\n'.format(optimizer_name, loss_name))
+    print('optimizer: {} (lr={})\nloss: {}\n'.format(optimizer_name, lr, loss_name))
     callbacks = [
         EarlyStopping(monitor='val_loss', patience=5, verbose=verbose),
         ModelCheckpoint(filepath=log_dir + 'ckpt_{}{}.h5'.format(model_name, model_version),
@@ -293,14 +299,14 @@ def main():
     if os.path.exists(record_file):
         with open(log_dir + 'record.csv', 'a') as f:
             f.write('{},{},{}{},{},{},{},{},{},{},{}\n'
-                    .format(now, eval, model_name, model_version, str_num_filters, optimizer_name,
-                            str_dropouts, str_recurrent_dropouts, epochs, batch_size, stateful))
+                    .format(now, eval, model_name, model_version, str_num_filters, optimizer_name, lr,
+                            str_dropouts, str_recurrent_dropouts, epochs))
     else:
         with open(log_dir + 'record.csv', 'a') as f:
-            f.write('date,score,model,num_filters,optimizer,dropouts,recurrent_dropouts,epochs,batch_size,stateful\n')
+            f.write('date,score,model,num_filters,optimizer,learning_rate,dropouts,recurrent_dropouts,epochs,batch_size,stateful\n')
             f.write('{},{},{}{},{},{},{},{},{},{},{}\n'
-                    .format(now, eval, model_name, model_version, str_num_filters, optimizer_name,
-                            str_dropouts, str_recurrent_dropouts, epochs, batch_size, stateful))
+                    .format(now, eval, model_name, model_version, str_num_filters, optimizer_name, lr,
+                            str_dropouts, str_recurrent_dropouts, epochs))
 
 if __name__ == '__main__':
     main()

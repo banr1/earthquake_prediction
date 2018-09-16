@@ -26,6 +26,7 @@ arg('--model', default='SimpleRNNmodel')
 arg('--version', type=int, default='99')
 arg('--optimizer', default='SGD')
     #ex) 'SGD', 'RMSprop', 'Adam', 'Adagrad', 'Adadelta', 'Nadam'
+arg('--learning_rate', type=int, default='0')
 arg('--loss', default='mean_poisson_log_likelihood')
     #ex) 'mean_squared_error', 'mean_absolute_error', 'mean_poisson_log_likelihood'
 arg('--stateful', type=boolian, default='True')
