@@ -298,13 +298,13 @@ def main():
     str_recurrent_dropouts = list_to_str(recurrent_dropouts)
     if os.path.exists(record_file):
         with open(log_dir + 'record.csv', 'a') as f:
-            f.write('{},{},{}{},{},{},{},{},{},{},{}\n'
+            f.write('{},{},{}{},{},{},{},{},{},{}\n'
                     .format(now, eval, model_name, model_version, str_num_filters, optimizer_name, lr,
                             str_dropouts, str_recurrent_dropouts, epochs))
     else:
         with open(log_dir + 'record.csv', 'a') as f:
             f.write('date,score,model,num_filters,optimizer,learning_rate,dropouts,recurrent_dropouts,epochs,batch_size,stateful\n')
-            f.write('{},{},{}{},{},{},{},{},{},{},{}\n'
+            f.write('{},{},{}{},{},{},{},{},{},{}\n'
                     .format(now, eval, model_name, model_version, str_num_filters, optimizer_name, lr,
                             str_dropouts, str_recurrent_dropouts, epochs))
 
