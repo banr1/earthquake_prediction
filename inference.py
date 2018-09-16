@@ -319,9 +319,9 @@ def main():
         md_bin_evals[la+90, lo+180] = row[model_name]
 
     fig = plt.figure(figsize=(10, 8))
-    m = Basemap(projection='lcc', resolution='c',
+    m = Basemap(projection='lcc', resolution='l',
                 width=2E6, height=2E6,
-                lat_0=38, lon_0=138,)
+                lat_0=37.5, lon_0=137.5,)
     m.shadedrelief(scale=0.5)
     m.pcolormesh(lon, lat, nv_bin_evals,
                  latlon=True, cmap='jet')
@@ -332,9 +332,9 @@ def main():
     plt.savefig(log_dir + 'fig_{}_eval_bin.png'.format('Naivemodel'))
 
     fig = plt.figure(figsize=(10, 8))
-    m = Basemap(projection='lcc', resolution='c',
+    m = Basemap(projection='lcc', resolution='l',
                 width=2E6, height=2E6,
-                lat_0=38, lon_0=138,)
+                lat_0=37.5, lon_0=137.5,)
     m.shadedrelief(scale=0.5)
     m.pcolormesh(lon, lat, md_bin_evals,
                  latlon=True, cmap='jet')
