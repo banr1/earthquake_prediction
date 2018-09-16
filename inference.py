@@ -7,6 +7,8 @@ import glob
 import datetime
 import random
 from PIL import Image
+from mpl_toolkits.basemap import Basemap
+from tqdm import tqdm
 import keras.optimizers
 import keras.backend as K
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
@@ -133,12 +135,33 @@ def get_daily_data(df, start, end, dummy_col):
 
 def naive_evaluate(test_gen, test_steps, pre_mean_loss, target_length, naive_period):
     errors = []
-    for step in range(test_steps):
+    for step in tqdm(range(test_steps)):
         samples, targets = next(test_gen)
         preds = samples[:, -naive_period, -target_length:]
-        error = np.mean(pre_mean_loss(targets, preds))
-        errors.append(error)
-    return np.mean(errors)
+        bin_error = pre_mean_loss(targets, preds)
+        day_error = np.mean(bin_error, axis=1)
+        if step == 0:
+            bin_errors = bin_error
+            day_errors = day_error
+        else:
+            bin_errors = np.vstack((bin_errors, bin_error))
+            day_errors = np.hstack((day_errors, day_error))
+    return np.mean(bin_errors, axis=0), day_errors, np.mean(day_errors)
+
+def pred_evaluate(test_gen, test_steps, pre_mean_loss, target_length, model):
+    errors = []
+    for step in tqdm(range(test_steps)):
+        samples, targets = next(test_gen)
+        preds = model.predict(samples)
+        bin_error = pre_mean_loss(targets, preds)
+        day_error = np.mean(bin_error, axis=1)
+        if step == 0:
+            bin_errors = bin_error
+            day_errors = day_error
+        else:
+            bin_errors = np.vstack((bin_errors, bin_error))
+            day_errors = np.hstack((day_errors, day_error))
+    return np.mean(bin_errors, axis=0), day_errors, np.mean(day_errors)
 
 def generator(data, lookback, min_idx, max_idx, batch_size, target_length):
     if max_idx is None:
@@ -185,10 +208,10 @@ def main():
     max_m4 = float_data_m4.max(axis=(0,1))
     float_data_m2 = float_data_m2 * max_m4 / max_m2
     plt.hist(float_data_m2[:train_period].sum(axis=0), bins=10)
-    plt.savefig(log_dir + 'train_hist.png')
+    plt.savefig(log_dir + 'fig_train_hist.png')
     target_length = float_data_m4.shape[1]
     float_data = np.hstack([float_data_m2, float_data_m4])
-    print('float_data shape: {}'.format(float_data.shape))
+    print('data shape: {}'.format(float_data.shape))
 
     lr = learning_rate if learning_rate else get_default_lr(optimizer_name)
     optimizer = find_class_by_name(optimizer_name, [keras.optimizers])(lr=lr)
@@ -255,39 +278,68 @@ def main():
     plt.ylim(ymin=0)
     plt.title('Training and validation loss')
     plt.legend()
-    plt.savefig(log_dir + 'loss_{}{}.png'.format(model_name, model_version))
+    plt.savefig(log_dir + 'fig_{}{}_loss.png'.format(model_name, model_version))
 
-    print('【prediction】')
-    pred = model.predict_generator(test_gen,
-                                   steps=test_steps,
-                                   verbose=verbose)
     print('【evaluation】')
-    eval = model.evaluate_generator(test_gen,
-                                    steps=test_steps,
-                                    verbose=verbose)
-    naive_eval = naive_evaluate(test_gen, test_steps, pre_mean_loss, target_length, naive_period)
+    nv_bin_eval, nv_day_eval, nv_eval = naive_evaluate(test_gen, test_steps, pre_mean_loss, target_length, naive_period)
+    md_bin_eval, md_day_eval, md_eval = pred_evaluate(test_gen, test_steps, pre_mean_loss, target_length, model)
+    print('Naivemodel: {}'.format(nv_eval))
+    print('{}{}: {}'.format(model_name, model_version, md_eval))
 
-    pred_days = 92
-    pred = pred[-pred_days:, :]
-    naive_pred = float_data[-(2*pred_days + naive_period): -(pred_days + naive_period), -99:]
-    true = float_data[-pred_days:, -99:]
-    df_pred = pd.DataFrame(pred.sum(axis=0), index=latlon)
-    df_naive_pred = pd.DataFrame(naive_pred.sum(axis=0), index=latlon)
-    df_true = pd.DataFrame(true.sum(axis=0), index=latlon)
-    df_eval = pd.concat([df_naive_pred, df_pred, df_true], axis=1)
-    df_eval.columns = ['na_pred', 'pred', 'true']
-    df_eval['na_eval'] = pre_mean_loss(df_eval['true'], df_eval['na_pred'])
-    df_eval['eval'] = pre_mean_loss(df_eval['true'], df_eval['pred'])
-    col_list = ['true', 'pred', 'eval', 'na_pred', 'na_eval']
-    df_eval = df_eval.loc[:, col_list]
-    sr_sum = pd.Series(df_eval.sum(axis=0), index=col_list, name='sum')
-    sr_max = pd.Series(df_eval.max(axis=0), index=col_list, name='max')
-    sr_mean = pd.Series(df_eval.mean(axis=0), index=col_list, name='mean')
-    print('【result (last 3month)】')
-    print(df_eval.sort_values(by='eval').append(sr_sum).append(sr_max).append(sr_mean).tail(20))
-    df_eval = df_eval.append(sr_sum).append(sr_max).append(sr_mean)
-    df_eval.to_csv(log_dir + 'eval_{}{}.csv'.format(model_name, model_version))
-    print('【result (all)】\n model: {}\n naive: {}'.format(eval, naive_eval))
+    df_nv_day_eval = pd.DataFrame(nv_day_eval, index=pd.date_range(end=end_day, periods=93), columns=['Naivemodel'])
+    df_md_day_eval = pd.DataFrame(md_day_eval, index=pd.date_range(end=end_day, periods=93), columns=[model_name])
+    df_day_eval = pd.concat([df_md_day_eval, df_nv_day_eval], axis=1)
+    df_day_eval.plot()
+    plt.savefig(log_dir + 'fig_{}{}_eval_day_vs_nv.png'.format(model_name, model_version))
+
+    df_nv_bin_eval = pd.DataFrame(nv_bin_eval, index=latlon, columns=['Naivemodel'])
+    df_md_bin_eval = pd.DataFrame(md_bin_eval, index=latlon, columns=[model_name])
+    df_bin_eval = pd.concat([df_md_bin_eval, df_nv_bin_eval], axis=1)
+    df_bin_eval.plot()
+    plt.savefig(log_dir + 'fig_{}{}_eval_bin_vs_nv.png'.format(model_name, model_version))
+
+    df_bin_eval = df_bin_eval.reset_index()
+    df_bin_eval['lat'] = df_bin_eval['index'].astype(str).str[:2].astype(int)
+    df_bin_eval['lon'] = df_bin_eval['index'].astype(str).str[3:].astype(int)
+    df_bin_eval = df_bin_eval.iloc[:, 1:]
+
+    lat = np.arange(-89, 91)
+    lon = np.arange(-179, 181)
+    lon, lat = np.meshgrid(lon, lat)
+    nv_bin_evals = np.zeros((180, 360))
+    md_bin_evals = np.zeros((180, 360))
+
+    for idx, row in df_bin_eval.iterrows():
+        la = row['lat'].astype(int)
+        lo = row['lon'].astype(int)
+        nv_bin_evals[la+90, lo+180] = row['Naivemodel']
+        md_bin_evals[la+90, lo+180] = row[model_name]
+
+    fig = plt.figure(figsize=(10, 8))
+    m = Basemap(projection='lcc', resolution='c',
+                width=2E6, height=2E6,
+                lat_0=38, lon_0=138,)
+    m.shadedrelief(scale=0.5)
+    m.pcolormesh(lon, lat, nv_bin_evals,
+                 latlon=True, cmap='jet')
+    plt.clim(0, 1)
+    m.drawcoastlines(color='lightgray')
+    plt.title('Naivemodel')
+    plt.colorbar(label='Poisson Log Likelihood')
+    plt.savefig(log_dir + 'fig_{}_eval_bin.png'.format('Naivemodel'))
+
+    fig = plt.figure(figsize=(10, 8))
+    m = Basemap(projection='lcc', resolution='c',
+                width=2E6, height=2E6,
+                lat_0=38, lon_0=138,)
+    m.shadedrelief(scale=0.5)
+    m.pcolormesh(lon, lat, md_bin_evals,
+                 latlon=True, cmap='jet')
+    plt.clim(0, 1)
+    m.drawcoastlines(color='lightgray')
+    plt.title(model_name)
+    plt.colorbar(label='Poisson Log Likelihood')
+    plt.savefig(log_dir + 'fig_{}{}_eval_bin.png'.format(model_name, model_version))
 
     if not record:
         return
