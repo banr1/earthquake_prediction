@@ -31,6 +31,7 @@ if __name__ == '__main__':
     dropouts = args.dropouts
     recurrent_dropouts = args.recurrent_dropouts
     random_seed = args.random_seed
+    tensorboard = args.tensorboard
     naive_period = args.naive_period
     start_day = args.start_day
     split_day_1 = args.split_day_1
@@ -258,8 +259,9 @@ def main():
         ModelCheckpoint(filepath=log_dir + 'ckpt_{}{}.h5'.format(model_name, model_version),
                         monitor='val_loss', save_best_only=True, verbose=verbose),
         ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=verbose),
-        TensorBoard(log_dir=log_dir + 'tensorboard/', batch_size=batch_size),
         ]
+    if tensorboard:
+        callbacks.append(TensorBoard(log_dir=log_dir + 'tensorboard/', batch_size=batch_size))
     print('【training】')
     history = model.fit_generator(train_gen,
                                   steps_per_epoch=train_steps,
