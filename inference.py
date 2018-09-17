@@ -236,7 +236,7 @@ def main():
     max_m4 = float_data_m4.max(axis=(0,1))
     float_data_m2 = float_data_m2 * max_m4 / max_m2
     plt.hist(float_data_m2[:train_period].sum(axis=0), bins=10)
-    plt.savefig(log_dir + 'fig_train_hist.png')
+    plt.savefig(log_dir + 'fig_train_hist.png', transparent=True, bbox_inches='tight')
     target_length = float_data_m4.shape[1]
     float_data = np.hstack([float_data_m2, float_data_m4])
     print('data shape: {}'.format(float_data.shape))
@@ -307,7 +307,7 @@ def main():
     plt.ylim(ymin=0)
     plt.title('Training and validation loss')
     plt.legend()
-    plt.savefig(log_dir + 'fig_{}{}_loss.png'.format(model_name, model_version))
+    plt.savefig(log_dir + 'fig_{}{}_loss.png'.format(model_name, model_version), transparent=True, bbox_inches='tight')
 
     print('【evaluation】')
     bin_true, day_true, true, nv_bin_pred, nv_day_pred, nv_pred, nv_bin_eval, nv_day_eval, nv_eval = naive_evaluate(
@@ -325,9 +325,9 @@ def main():
     df_day_eval = pd.concat([df_day_true, df_nv_day_pred, df_md_day_pred, df_md_day_eval, df_nv_day_eval], axis=1)
     df_day_eval.to_csv(log_dir + 'df_{}{}_eval_day.csv'.format(model_name, model_version), index=None)
     df_day_eval.loc[:, ['Naive predicton', '{} prediction'.format(model_name), 'True value']].plot()
-    plt.savefig(log_dir + 'fig_{}{}_pred_day_vs_nv.png'.format(model_name, model_version))
+    plt.savefig(log_dir + 'fig_{}{}_pred_day_vs_nv.png'.format(model_name, model_version), transparent=True, bbox_inches='tight')
     df_day_eval.loc[:, ['Naive error', '{} error'.format(model_name)]].plot()
-    plt.savefig(log_dir + 'fig_{}{}_eval_day_vs_nv.png'.format(model_name, model_version))
+    plt.savefig(log_dir + 'fig_{}{}_eval_day_vs_nv.png'.format(model_name, model_version), transparent=True, bbox_inches='tight')
 
     df_bin_true = pd.DataFrame(bin_true, index=latlon, columns=['True value'])
     df_nv_bin_pred = pd.DataFrame(nv_bin_pred, index=latlon, columns=['Naive predicton'])
@@ -337,9 +337,9 @@ def main():
     df_bin_eval = pd.concat([df_bin_true, df_nv_bin_pred, df_md_bin_pred, df_md_bin_eval, df_nv_bin_eval], axis=1)
     df_bin_eval.to_csv(log_dir + 'df_{}{}_eval_bin.csv'.format(model_name, model_version), index=None)
     df_bin_eval.loc[:, ['Naive predicton', '{} prediction'.format(model_name), 'True value']].plot()
-    plt.savefig(log_dir + 'fig_{}{}_pred_bin_vs_nv.png'.format(model_name, model_version))
+    plt.savefig(log_dir + 'fig_{}{}_pred_bin_vs_nv.png'.format(model_name, model_version), transparent=True, bbox_inches='tight')
     df_bin_eval.loc[:, ['Naive error', '{} error'.format(model_name)]].plot()
-    plt.savefig(log_dir + 'fig_{}{}_eval_bin_vs_nv.png'.format(model_name, model_version))
+    plt.savefig(log_dir + 'fig_{}{}_eval_bin_vs_nv.png'.format(model_name, model_version), transparent=True, bbox_inches='tight')
 
     df_bin_eval = df_bin_eval.reset_index()
     df_bin_eval['lat'] = df_bin_eval['index'].astype(str).str[:2].astype(int)
@@ -375,7 +375,7 @@ def main():
     m.drawcoastlines(color='lightgray')
     plt.title('True value')
     plt.colorbar(label='Poisson Log Likelihood')
-    plt.savefig(log_dir + 'fig_true_bin.png')
+    plt.savefig(log_dir + 'fig_true_bin.png', transparent=True, bbox_inches='tight')
 
     fig = plt.figure(figsize=(10, 8))
     m = Basemap(projection='lcc', resolution='l',
@@ -388,7 +388,7 @@ def main():
     m.drawcoastlines(color='lightgray')
     plt.title('Naive')
     plt.colorbar(label='Poisson Log Likelihood')
-    plt.savefig(log_dir + 'fig_Naive_pred_bin.png')
+    plt.savefig(log_dir + 'fig_Naive_pred_bin.png', transparent=True, bbox_inches='tight')
 
     fig = plt.figure(figsize=(10, 8))
     m = Basemap(projection='lcc', resolution='l',
@@ -401,7 +401,7 @@ def main():
     m.drawcoastlines(color='lightgray')
     plt.title(model_name)
     plt.colorbar(label='Poisson Log Likelihood')
-    plt.savefig(log_dir + 'fig_{}{}_pred_bin.png'.format(model_name, model_version))
+    plt.savefig(log_dir + 'fig_{}{}_pred_bin.png'.format(model_name, model_version), transparent=True, bbox_inches='tight')
 
     fig = plt.figure(figsize=(10, 8))
     m = Basemap(projection='lcc', resolution='l',
@@ -414,7 +414,7 @@ def main():
     m.drawcoastlines(color='lightgray')
     plt.title('Naive')
     plt.colorbar(label='Poisson Log Likelihood')
-    plt.savefig(log_dir + 'fig_Naive_eval_bin.png')
+    plt.savefig(log_dir + 'fig_Naive_eval_bin.png', transparent=True, bbox_inches='tight')
 
     fig = plt.figure(figsize=(10, 8))
     m = Basemap(projection='lcc', resolution='l',
@@ -427,7 +427,7 @@ def main():
     m.drawcoastlines(color='lightgray')
     plt.title(model_name)
     plt.colorbar(label='Poisson Log Likelihood')
-    plt.savefig(log_dir + 'fig_{}{}_eval_bin.png'.format(model_name, model_version))
+    plt.savefig(log_dir + 'fig_{}{}_eval_bin.png'.format(model_name, model_version), transparent=True, bbox_inches='tight')
 
     if not record:
         return
