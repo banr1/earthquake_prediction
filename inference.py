@@ -315,8 +315,8 @@ def main():
     for idx, row in df_bin_eval.iterrows():
         la = row['lat'].astype(int)
         lo = row['lon'].astype(int)
-        nv_bin_evals[la+90, lo+180] = row['Naivemodel']
-        md_bin_evals[la+90, lo+180] = row[model_name]
+        nv_bin_evals[la+89, lo+179] = row['Naivemodel']
+        md_bin_evals[la+89, lo+179] = row[model_name]
 
     fig = plt.figure(figsize=(10, 8))
     m = Basemap(projection='lcc', resolution='l',
@@ -325,7 +325,7 @@ def main():
     m.shadedrelief(scale=0.5)
     m.pcolormesh(lon, lat, nv_bin_evals,
                  latlon=True, cmap='jet')
-    plt.clim(0, 1)
+    plt.clim(0, 2)
     m.drawcoastlines(color='lightgray')
     plt.title('Naivemodel')
     plt.colorbar(label='Poisson Log Likelihood')
@@ -338,7 +338,7 @@ def main():
     m.shadedrelief(scale=0.5)
     m.pcolormesh(lon, lat, md_bin_evals,
                  latlon=True, cmap='jet')
-    plt.clim(0, 1)
+    plt.clim(0, 2)
     m.drawcoastlines(color='lightgray')
     plt.title(model_name)
     plt.colorbar(label='Poisson Log Likelihood')
