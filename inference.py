@@ -139,23 +139,21 @@ def naive_evaluate(test_gen, test_steps, pre_mean_loss, target_length, naive_per
     for step in tqdm(range(test_steps)):
         sample, target = next(test_gen)
         pred = sample[:, -naive_period, -target_length:]
-        bin_target = np.mean(target, axis=0)
         day_target = np.mean(target, axis=1)
-        bin_pred = np.mean(pred, axis=0)
         day_pred = np.mean(pred, axis=1)
         bin_error = pre_mean_loss(target, pred)
         day_error = np.mean(bin_error, axis=1)
         if step == 0:
-            bin_targets = bin_target
+            bin_targets = target
             day_targets = day_target
-            bin_preds = bin_pred
+            bin_preds = pred
             day_preds = day_pred
             bin_errors = bin_error
             day_errors = day_error
         else:
-            bin_targets = np.vstack((bin_targets, bin_target))
+            bin_targets = np.vstack((bin_targets, target))
             day_targets = np.hstack((day_targets, day_target))
-            bin_preds = np.vstack((bin_preds, bin_pred))
+            bin_preds = np.vstack((bin_preds, pred))
             day_preds = np.hstack((day_preds, day_pred))
             bin_errors = np.vstack((bin_errors, bin_error))
             day_errors = np.hstack((day_errors, day_error))
@@ -167,28 +165,20 @@ def model_evaluate(test_gen, test_steps, pre_mean_loss, target_length, model):
     for step in tqdm(range(test_steps)):
         sample, target = next(test_gen)
         pred = model.predict(sample)
-        bin_target = np.mean(target, axis=0)
-        day_target = np.mean(target, axis=1)
-        bin_pred = np.mean(pred, axis=0)
         day_pred = np.mean(pred, axis=1)
         bin_error = pre_mean_loss(target, pred)
         day_error = np.mean(bin_error, axis=1)
         if step == 0:
-            bin_targets = bin_target
-            day_targets = day_target
-            bin_preds = bin_pred
+            bin_preds = pred
             day_preds = day_pred
             bin_errors = bin_error
             day_errors = day_error
         else:
-            bin_targets = np.vstack((bin_targets, bin_target))
-            day_targets = np.hstack((day_targets, day_target))
-            bin_preds = np.vstack((bin_preds, bin_pred))
+            bin_preds = np.vstack((bin_preds, pred))
             day_preds = np.hstack((day_preds, day_pred))
             bin_errors = np.vstack((bin_errors, bin_error))
             day_errors = np.hstack((day_errors, day_error))
-    return (np.mean(bin_targets, axis=0), day_targets, np.mean(day_targets),
-            np.mean(bin_preds, axis=0), day_preds, np.mean(day_preds),
+    return (np.mean(bin_preds, axis=0), day_preds, np.mean(day_preds),
             np.mean(bin_errors, axis=0), day_errors, np.mean(day_errors))
 
 def generator(data, lookback, min_idx, max_idx, batch_size, target_length):
@@ -312,7 +302,7 @@ def main():
     print('【evaluation】')
     bin_true, day_true, true, nv_bin_pred, nv_day_pred, nv_pred, nv_bin_eval, nv_day_eval, nv_eval = naive_evaluate(
             test_gen, test_steps, pre_mean_loss, target_length, naive_period)
-    _, _, _, md_bin_pred, md_day_pred, md_pred, md_bin_eval, md_day_eval, md_eval = model_evaluate(
+    md_bin_pred, md_day_pred, md_pred, md_bin_eval, md_day_eval, md_eval = model_evaluate(
             test_gen, test_steps, pre_mean_loss, target_length, model)
     print('Naivemodel: {}'.format(nv_eval))
     print('{}{}: {}'.format(model_name, model_version, md_eval))
