@@ -136,34 +136,60 @@ def get_daily_data(df, start, end, dummy_col):
     return df
 
 def naive_evaluate(test_gen, test_steps, pre_mean_loss, target_length, naive_period):
-    errors = []
     for step in tqdm(range(test_steps)):
-        samples, targets = next(test_gen)
-        preds = samples[:, -naive_period, -target_length:]
-        bin_error = pre_mean_loss(targets, preds)
+        sample, target = next(test_gen)
+        pred = sample[:, -naive_period, -target_length:]
+        bin_target = np.mean(target, axis=0)
+        day_target = np.mean(target, axis=1)
+        bin_pred = np.mean(pred, axis=0)
+        day_pred = np.mean(pred, axis=1)
+        bin_error = pre_mean_loss(target, pred)
         day_error = np.mean(bin_error, axis=1)
         if step == 0:
+            bin_targets = bin_target
+            day_targets = day_target
+            bin_preds = bin_pred
+            day_preds = day_pred
             bin_errors = bin_error
             day_errors = day_error
         else:
+            bin_targets = np.vstack((bin_targets, bin_target))
+            day_targets = np.hstack((day_targets, day_target))
+            bin_preds = np.vstack((bin_preds, bin_pred))
+            day_preds = np.hstack((day_preds, day_pred))
             bin_errors = np.vstack((bin_errors, bin_error))
             day_errors = np.hstack((day_errors, day_error))
-    return np.mean(bin_errors, axis=0), day_errors, np.mean(day_errors)
+    return (np.mean(bin_targets, axis=0), day_targets, np.mean(day_targets),
+            np.mean(bin_preds, axis=0), day_preds, np.mean(day_preds),
+            np.mean(bin_errors, axis=0), day_errors, np.mean(day_errors))
 
-def pred_evaluate(test_gen, test_steps, pre_mean_loss, target_length, model):
-    errors = []
+def model_evaluate(test_gen, test_steps, pre_mean_loss, target_length, model):
     for step in tqdm(range(test_steps)):
-        samples, targets = next(test_gen)
-        preds = model.predict(samples)
-        bin_error = pre_mean_loss(targets, preds)
+        sample, target = next(test_gen)
+        pred = model.predict(sample)
+        bin_target = np.mean(target, axis=0)
+        day_target = np.mean(target, axis=1)
+        bin_pred = np.mean(pred, axis=0)
+        day_pred = np.mean(pred, axis=1)
+        bin_error = pre_mean_loss(target, pred)
         day_error = np.mean(bin_error, axis=1)
         if step == 0:
+            bin_targets = bin_target
+            day_targets = day_target
+            bin_preds = bin_pred
+            day_preds = day_pred
             bin_errors = bin_error
             day_errors = day_error
         else:
+            bin_targets = np.vstack((bin_targets, bin_target))
+            day_targets = np.hstack((day_targets, day_target))
+            bin_preds = np.vstack((bin_preds, bin_pred))
+            day_preds = np.hstack((day_preds, day_pred))
             bin_errors = np.vstack((bin_errors, bin_error))
             day_errors = np.hstack((day_errors, day_error))
-    return np.mean(bin_errors, axis=0), day_errors, np.mean(day_errors)
+    return (np.mean(bin_targets, axis=0), day_targets, np.mean(day_targets),
+            np.mean(bin_preds, axis=0), day_preds, np.mean(day_preds),
+            np.mean(bin_errors, axis=0), day_errors, np.mean(day_errors))
 
 def generator(data, lookback, min_idx, max_idx, batch_size, target_length):
     if max_idx is None:
@@ -284,21 +310,35 @@ def main():
     plt.savefig(log_dir + 'fig_{}{}_loss.png'.format(model_name, model_version))
 
     print('【evaluation】')
-    nv_bin_eval, nv_day_eval, nv_eval = naive_evaluate(test_gen, test_steps, pre_mean_loss, target_length, naive_period)
-    md_bin_eval, md_day_eval, md_eval = pred_evaluate(test_gen, test_steps, pre_mean_loss, target_length, model)
+    bin_true, day_true, true, nv_bin_pred, nv_day_pred, nv_pred, nv_bin_eval, nv_day_eval, nv_eval = naive_evaluate(
+            test_gen, test_steps, pre_mean_loss, target_length, naive_period)
+    _, _, _, md_bin_pred, md_day_pred, md_pred, md_bin_eval, md_day_eval, md_eval = model_evaluate(
+            test_gen, test_steps, pre_mean_loss, target_length, model)
     print('Naivemodel: {}'.format(nv_eval))
     print('{}{}: {}'.format(model_name, model_version, md_eval))
 
-    df_nv_day_eval = pd.DataFrame(nv_day_eval, index=pd.date_range(end=end_day, periods=93), columns=['Naivemodel'])
-    df_md_day_eval = pd.DataFrame(md_day_eval, index=pd.date_range(end=end_day, periods=93), columns=[model_name])
-    df_day_eval = pd.concat([df_md_day_eval, df_nv_day_eval], axis=1)
-    df_day_eval.plot()
+    df_day_true = pd.DataFrame(day_true, index=pd.date_range(end=end_day, periods=93), columns=['True value'])
+    df_nv_day_pred = pd.DataFrame(nv_day_pred, index=pd.date_range(end=end_day, periods=93), columns=['Naive predicton'])
+    df_md_day_pred = pd.DataFrame(md_day_pred, index=pd.date_range(end=end_day, periods=93), columns=['{} prediction'.format(model_name)])
+    df_nv_day_eval = pd.DataFrame(nv_day_eval, index=pd.date_range(end=end_day, periods=93), columns=['Naive error'])
+    df_md_day_eval = pd.DataFrame(md_day_eval, index=pd.date_range(end=end_day, periods=93), columns=['{} error'.format(model_name)])
+    df_day_eval = pd.concat([df_day_true, df_nv_day_pred, df_md_day_pred, df_md_day_eval, df_nv_day_eval], axis=1)
+    df_day_eval.to_csv(log_dir + 'df_{}{}_eval_day.csv'.format(model_name, model_version), index=None)
+    df_day_eval.loc[:, ['Naive predicton', '{} prediction'.format(model_name), 'True value']].plot()
+    plt.savefig(log_dir + 'fig_{}{}_pred_day_vs_nv.png'.format(model_name, model_version))
+    df_day_eval.loc[:, ['Naive error', '{} error'.format(model_name)]].plot()
     plt.savefig(log_dir + 'fig_{}{}_eval_day_vs_nv.png'.format(model_name, model_version))
 
-    df_nv_bin_eval = pd.DataFrame(nv_bin_eval, index=latlon, columns=['Naivemodel'])
-    df_md_bin_eval = pd.DataFrame(md_bin_eval, index=latlon, columns=[model_name])
-    df_bin_eval = pd.concat([df_md_bin_eval, df_nv_bin_eval], axis=1)
-    df_bin_eval.plot()
+    df_bin_true = pd.DataFrame(bin_true, index=latlon, columns=['True value'])
+    df_nv_bin_pred = pd.DataFrame(nv_bin_pred, index=latlon, columns=['Naive predicton'])
+    df_md_bin_pred = pd.DataFrame(md_bin_pred, index=latlon, columns=['{} prediction'.format(model_name)])
+    df_nv_bin_eval = pd.DataFrame(nv_bin_eval, index=latlon, columns=['Naive error'])
+    df_md_bin_eval = pd.DataFrame(md_bin_eval, index=latlon, columns=['{} error'.format(model_name)])
+    df_bin_eval = pd.concat([df_bin_true, df_nv_bin_pred, df_md_bin_pred, df_md_bin_eval, df_nv_bin_eval], axis=1)
+    df_bin_eval.to_csv(log_dir + 'df_{}{}_eval_bin.csv'.format(model_name, model_version), index=None)
+    df_bin_eval.loc[:, ['Naive predicton', '{} prediction'.format(model_name), 'True value']].plot()
+    plt.savefig(log_dir + 'fig_{}{}_pred_bin_vs_nv.png'.format(model_name, model_version))
+    df_bin_eval.loc[:, ['Naive error', '{} error'.format(model_name)]].plot()
     plt.savefig(log_dir + 'fig_{}{}_eval_bin_vs_nv.png'.format(model_name, model_version))
 
     df_bin_eval = df_bin_eval.reset_index()
@@ -309,14 +349,59 @@ def main():
     lat = np.arange(-89, 91)
     lon = np.arange(-179, 181)
     lon, lat = np.meshgrid(lon, lat)
+    bin_trues = np.zeros((180, 360))
+    nv_bin_preds = np.zeros((180, 360))
+    md_bin_preds = np.zeros((180, 360))
     nv_bin_evals = np.zeros((180, 360))
     md_bin_evals = np.zeros((180, 360))
 
     for idx, row in df_bin_eval.iterrows():
         la = row['lat'].astype(int)
         lo = row['lon'].astype(int)
-        nv_bin_evals[la+89, lo+179] = row['Naivemodel']
-        md_bin_evals[la+89, lo+179] = row[model_name]
+        bin_trues[la+89, lo+179] = row['True value']
+        nv_bin_preds[la+89, lo+179] = row['Naive predicton']
+        md_bin_preds[la+89, lo+179] = row['{} prediction'.format(model_name)]
+        nv_bin_evals[la+89, lo+179] = row['Naive error']
+        md_bin_evals[la+89, lo+179] = row['{} error'.format(model_name)]
+
+    fig = plt.figure(figsize=(10, 8))
+    m = Basemap(projection='lcc', resolution='l',
+                width=2E6, height=2E6,
+                lat_0=37.5, lon_0=137.5,)
+    m.shadedrelief(scale=0.5)
+    m.pcolormesh(lon, lat, bin_trues,
+                 latlon=True, cmap='jet')
+    plt.clim(0, 0.5)
+    m.drawcoastlines(color='lightgray')
+    plt.title('True value')
+    plt.colorbar(label='Poisson Log Likelihood')
+    plt.savefig(log_dir + 'fig_true_bin.png')
+
+    fig = plt.figure(figsize=(10, 8))
+    m = Basemap(projection='lcc', resolution='l',
+                width=2E6, height=2E6,
+                lat_0=37.5, lon_0=137.5,)
+    m.shadedrelief(scale=0.5)
+    m.pcolormesh(lon, lat, nv_bin_preds,
+                 latlon=True, cmap='jet')
+    plt.clim(0, 0.5)
+    m.drawcoastlines(color='lightgray')
+    plt.title('Naive')
+    plt.colorbar(label='Poisson Log Likelihood')
+    plt.savefig(log_dir + 'fig_Naive_pred_bin.png')
+
+    fig = plt.figure(figsize=(10, 8))
+    m = Basemap(projection='lcc', resolution='l',
+                width=2E6, height=2E6,
+                lat_0=37.5, lon_0=137.5,)
+    m.shadedrelief(scale=0.5)
+    m.pcolormesh(lon, lat, md_bin_preds,
+                 latlon=True, cmap='jet')
+    plt.clim(0, 0.5)
+    m.drawcoastlines(color='lightgray')
+    plt.title(model_name)
+    plt.colorbar(label='Poisson Log Likelihood')
+    plt.savefig(log_dir + 'fig_{}{}_pred_bin.png'.format(model_name, model_version))
 
     fig = plt.figure(figsize=(10, 8))
     m = Basemap(projection='lcc', resolution='l',
@@ -327,9 +412,9 @@ def main():
                  latlon=True, cmap='jet')
     plt.clim(0, 2)
     m.drawcoastlines(color='lightgray')
-    plt.title('Naivemodel')
+    plt.title('Naive')
     plt.colorbar(label='Poisson Log Likelihood')
-    plt.savefig(log_dir + 'fig_{}_eval_bin.png'.format('Naivemodel'))
+    plt.savefig(log_dir + 'fig_Naive_eval_bin.png')
 
     fig = plt.figure(figsize=(10, 8))
     m = Basemap(projection='lcc', resolution='l',
