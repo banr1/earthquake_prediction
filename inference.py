@@ -135,30 +135,36 @@ def get_daily_data(df, start, end, dummy_col):
     df = df.astype(int)
     return df
 
+def get_test_true(test_gen, test_steps):
+    for step in tqdm(range(test_steps)):
+        _, target = next(test_gen)
+        day_target = np.mean(target, axis=1)
+        if step == 0:
+            bin_targets = target
+            day_targets = day_target
+        else:
+            bin_targets = np.vstack((bin_targets, target))
+            day_targets = np.hstack((day_targets, day_target))
+    return np.mean(bin_targets, axis=0), day_targets, np.mean(day_targets)
+
 def naive_evaluate(test_gen, test_steps, pre_mean_loss, target_length, naive_period):
     for step in tqdm(range(test_steps)):
         sample, target = next(test_gen)
         pred = np.random.poisson(lam=0.01, size=(31, target_length))
-        day_target = np.mean(target, axis=1)
         day_pred = np.mean(pred, axis=1)
         bin_error = pre_mean_loss(target, pred)
         day_error = np.mean(bin_error, axis=1)
         if step == 0:
-            bin_targets = target
-            day_targets = day_target
             bin_preds = pred
             day_preds = day_pred
             bin_errors = bin_error
             day_errors = day_error
         else:
-            bin_targets = np.vstack((bin_targets, target))
-            day_targets = np.hstack((day_targets, day_target))
             bin_preds = np.vstack((bin_preds, pred))
             day_preds = np.hstack((day_preds, day_pred))
             bin_errors = np.vstack((bin_errors, bin_error))
             day_errors = np.hstack((day_errors, day_error))
-    return (np.mean(bin_targets, axis=0), day_targets, np.mean(day_targets),
-            np.mean(bin_preds, axis=0), day_preds, np.mean(day_preds),
+    return (np.mean(bin_preds, axis=0), day_preds, np.mean(day_preds),
             np.mean(bin_errors, axis=0), day_errors, np.mean(day_errors))
 
 def model_evaluate(test_gen, test_steps, pre_mean_loss, target_length, model):
@@ -316,7 +322,8 @@ def main():
     plt.savefig(log_dir + 'fig_{}{}_loss.png'.format(model_name, model_version), transparent=True, bbox_inches='tight')
 
     print('【evaluation】')
-    bin_true, day_true, true, nv_bin_pred, nv_day_pred, nv_pred, nv_bin_eval, nv_day_eval, nv_eval = naive_evaluate(
+    bin_true, day_true, true = get_test_true(test_gen, test_steps)
+    nv_bin_pred, nv_day_pred, nv_pred, nv_bin_eval, nv_day_eval, nv_eval = naive_evaluate(
             test_gen, test_steps, pre_mean_loss, target_length, naive_period)
     md_bin_pred, md_day_pred, md_pred, md_bin_eval, md_day_eval, md_eval = model_evaluate(
             test_gen, test_steps, pre_mean_loss, target_length, model)
