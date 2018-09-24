@@ -139,7 +139,6 @@ def naive_evaluate(test_gen, test_steps, pre_mean_loss, target_length, naive_per
     for step in tqdm(range(test_steps)):
         sample, target = next(test_gen)
         pred = np.random.poisson(lam=0.01, size=(31, target_length))
-        print(pred.shape)
         day_target = np.mean(target, axis=1)
         day_pred = np.mean(pred, axis=1)
         bin_error = pre_mean_loss(target, pred)
@@ -198,6 +197,22 @@ def generator(data, lookback, min_idx, max_idx, batch_size, target_length):
             samples[j] = data[idxs]
             targets[j] = data[rows[j]][-target_length:]
         yield samples, targets
+
+def plot_on_map(evals, cmax, save_name):
+    lat = np.arange(-89, 91)
+    lon = np.arange(-179, 181)
+    lon, lat = np.meshgrid(lon, lat)
+    fig = plt.figure(figsize=(10, 8))
+    m = Basemap(projection='lcc', resolution='l',
+                width=2E6, height=2E6,
+                lat_0=37.5, lon_0=137.5,)
+    m.shadedrelief(scale=0.5)
+    m.pcolormesh(lon, lat, evals,
+                 latlon=True, cmap='jet')
+    plt.clim(0, cmax)
+    m.drawcoastlines(color='lightgray')
+    plt.colorbar(label='Poisson Log Likelihood')
+    plt.savefig(log_dir + 'fig_{}_eval_bin.png'.format(save_name), transparent=True, bbox_inches='tight')
 
 def main():
     session_conf = tf.ConfigProto(
@@ -337,9 +352,6 @@ def main():
     df_bin_eval['lon'] = df_bin_eval['index'].astype(str).str[3:].astype(int)
     df_bin_eval = df_bin_eval.iloc[:, 1:]
 
-    lat = np.arange(-89, 91)
-    lon = np.arange(-179, 181)
-    lon, lat = np.meshgrid(lon, lat)
     bin_trues = np.zeros((180, 360))
     nv_bin_preds = np.zeros((180, 360))
     md_bin_preds = np.zeros((180, 360))
@@ -355,70 +367,11 @@ def main():
         nv_bin_evals[la+89, lo+179] = row['Naive error']
         md_bin_evals[la+89, lo+179] = row['{} error'.format(model_name)]
 
-    fig = plt.figure(figsize=(10, 8))
-    m = Basemap(projection='lcc', resolution='l',
-                width=2E6, height=2E6,
-                lat_0=37.5, lon_0=137.5,)
-    m.shadedrelief(scale=0.5)
-    m.pcolormesh(lon, lat, bin_trues,
-                 latlon=True, cmap='jet')
-    plt.clim(0, 0.5)
-    m.drawcoastlines(color='lightgray')
-    plt.title('True value')
-    plt.colorbar(label='Poisson Log Likelihood')
-    plt.savefig(log_dir + 'fig_true_bin.png', transparent=True, bbox_inches='tight')
-
-    fig = plt.figure(figsize=(10, 8))
-    m = Basemap(projection='lcc', resolution='l',
-                width=2E6, height=2E6,
-                lat_0=37.5, lon_0=137.5,)
-    m.shadedrelief(scale=0.5)
-    m.pcolormesh(lon, lat, nv_bin_preds,
-                 latlon=True, cmap='jet')
-    plt.clim(0, 0.5)
-    m.drawcoastlines(color='lightgray')
-    plt.title('Naive')
-    plt.colorbar(label='Poisson Log Likelihood')
-    plt.savefig(log_dir + 'fig_Naive_pred_bin.png', transparent=True, bbox_inches='tight')
-
-    fig = plt.figure(figsize=(10, 8))
-    m = Basemap(projection='lcc', resolution='l',
-                width=2E6, height=2E6,
-                lat_0=37.5, lon_0=137.5,)
-    m.shadedrelief(scale=0.5)
-    m.pcolormesh(lon, lat, md_bin_preds,
-                 latlon=True, cmap='jet')
-    plt.clim(0, 0.5)
-    m.drawcoastlines(color='lightgray')
-    plt.title(model_name)
-    plt.colorbar(label='Poisson Log Likelihood')
-    plt.savefig(log_dir + 'fig_{}{}_pred_bin.png'.format(model_name, model_version), transparent=True, bbox_inches='tight')
-
-    fig = plt.figure(figsize=(10, 8))
-    m = Basemap(projection='lcc', resolution='l',
-                width=2E6, height=2E6,
-                lat_0=37.5, lon_0=137.5,)
-    m.shadedrelief(scale=0.5)
-    m.pcolormesh(lon, lat, nv_bin_evals,
-                 latlon=True, cmap='jet')
-    plt.clim(0, 2)
-    m.drawcoastlines(color='lightgray')
-    plt.title('Naive')
-    plt.colorbar(label='Poisson Log Likelihood')
-    plt.savefig(log_dir + 'fig_Naive_eval_bin.png', transparent=True, bbox_inches='tight')
-
-    fig = plt.figure(figsize=(10, 8))
-    m = Basemap(projection='lcc', resolution='l',
-                width=2E6, height=2E6,
-                lat_0=37.5, lon_0=137.5,)
-    m.shadedrelief(scale=0.5)
-    m.pcolormesh(lon, lat, md_bin_evals,
-                 latlon=True, cmap='jet')
-    plt.clim(0, 2)
-    m.drawcoastlines(color='lightgray')
-    plt.title(model_name)
-    plt.colorbar(label='Poisson Log Likelihood')
-    plt.savefig(log_dir + 'fig_{}{}_eval_bin.png'.format(model_name, model_version), transparent=True, bbox_inches='tight')
+    plot_on_map(bin_trues, 0.3, 'true')
+    plot_on_map(nv_bin_preds, 0.3, 'Naive_pred')
+    plot_on_map(md_bin_preds, 0.3, model_name+model_version+'_pred')
+    plot_on_map(nv_bin_evals, 2.0, 'Naive_eval')
+    plot_on_map(md_bin_evals, 2.0, model_name+model_version+'_eval')
 
     if not record:
         return
