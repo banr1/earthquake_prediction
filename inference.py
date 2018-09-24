@@ -14,8 +14,7 @@ import keras.backend as K
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
 
 from params import args
-import models
-import losses
+import models, naives, losses
 
 if __name__ == '__main__':
     model_name = args.model
@@ -147,26 +146,6 @@ def get_test_true(test_gen, test_steps):
             day_targets = np.hstack((day_targets, day_target))
     return np.mean(bin_targets, axis=0), day_targets, np.mean(day_targets)
 
-def naive_evaluate(test_gen, test_steps, pre_mean_loss, target_length, naive_period):
-    for step in tqdm(range(test_steps)):
-        sample, target = next(test_gen)
-        pred = np.random.poisson(lam=0.01, size=(31, target_length))
-        day_pred = np.mean(pred, axis=1)
-        bin_error = pre_mean_loss(target, pred)
-        day_error = np.mean(bin_error, axis=1)
-        if step == 0:
-            bin_preds = pred
-            day_preds = day_pred
-            bin_errors = bin_error
-            day_errors = day_error
-        else:
-            bin_preds = np.vstack((bin_preds, pred))
-            day_preds = np.hstack((day_preds, day_pred))
-            bin_errors = np.vstack((bin_errors, bin_error))
-            day_errors = np.hstack((day_errors, day_error))
-    return (np.mean(bin_preds, axis=0), day_preds, np.mean(day_preds),
-            np.mean(bin_errors, axis=0), day_errors, np.mean(day_errors))
-
 def model_evaluate(test_gen, test_steps, pre_mean_loss, target_length, model):
     for step in tqdm(range(test_steps)):
         sample, target = next(test_gen)
@@ -280,7 +259,11 @@ def main():
     train_steps = (train_period - lookback) // batch_size
     val_steps = (val_period - lookback) // batch_size
     test_steps = (len(float_data) - (train_period + val_period) - lookback) // batch_size
+    naive_class = find_class_by_name('Poissonnaive', [naives])()
     model_class = find_class_by_name(model_name, [models])()
+    naive = naive_class.build_naive(float_data,
+                                    batch_size=batch_size,
+                                    target_length=target_length)
     model = model_class.build_model(float_data,
                                     lookback=lookback,
                                     batch_size=batch_size,
@@ -323,8 +306,8 @@ def main():
 
     print('【evaluation】')
     bin_true, day_true, true = get_test_true(test_gen, test_steps)
-    nv_bin_pred, nv_day_pred, nv_pred, nv_bin_eval, nv_day_eval, nv_eval = naive_evaluate(
-            test_gen, test_steps, pre_mean_loss, target_length, naive_period)
+    nv_bin_pred, nv_day_pred, nv_pred, nv_bin_eval, nv_day_eval, nv_eval = model_evaluate(
+            test_gen, test_steps, pre_mean_loss, target_length, naive)
     md_bin_pred, md_day_pred, md_pred, md_bin_eval, md_day_eval, md_eval = model_evaluate(
             test_gen, test_steps, pre_mean_loss, target_length, model)
     print('Naivemodel: {}'.format(nv_eval))
