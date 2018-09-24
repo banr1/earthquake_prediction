@@ -138,7 +138,8 @@ def get_daily_data(df, start, end, dummy_col):
 def naive_evaluate(test_gen, test_steps, pre_mean_loss, target_length, naive_period):
     for step in tqdm(range(test_steps)):
         sample, target = next(test_gen)
-        pred = sample[:, -naive_period, -target_length:]
+        pred = np.random.poisson(lam=0.01, size=(31, target_length))
+        print(pred.shape)
         day_target = np.mean(target, axis=1)
         day_pred = np.mean(pred, axis=1)
         bin_error = pre_mean_loss(target, pred)
