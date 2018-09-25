@@ -7,8 +7,9 @@ class Naive():
         self.target_length = target_length
 
     def predict(self, samples):
-        pred = np.random.poisson(lam=self.lam, size=(self.batch_size, self.target_length))
-        return pred
+        e = 1e-5
+        pred = np.random.poisson(lam=self.lam-e, size=(self.batch_size, self.target_length))
+        return pred + e
 
 class Basenaive():
     def __init__(self):
