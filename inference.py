@@ -11,7 +11,8 @@ from mpl_toolkits.basemap import Basemap
 from tqdm import tqdm
 import keras.optimizers
 import keras.backend as K
-from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
+from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.callbacks import ReduceLROnPlateau, TensorBoard
 
 from params import args
 import models, naives, losses
@@ -197,7 +198,8 @@ def plot_on_map(evals, cmax, save_name):
     plt.clim(0, cmax)
     m.drawcoastlines(color='lightgray')
     plt.colorbar(label='Poisson Log Likelihood')
-    plt.savefig(log_dir + 'fig_{}_eval_bin.png'.format(save_name), transparent=True, bbox_inches='tight')
+    plt.savefig(log_dir + 'fig_{}_eval_bin.png'.format(save_name),
+                transparent=True, bbox_inches='tight')
 
 def main():
     session_conf = tf.ConfigProto(
@@ -280,10 +282,12 @@ def main():
         EarlyStopping(monitor='val_loss', patience=5, verbose=vb),
         ModelCheckpoint(filepath=log_dir + 'ckpt_{}{}.h5'.format(mdl_name, ver),
                         monitor='val_loss', save_best_only=True, verbose=vb),
-        ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=vb),
+        ReduceLROnPlateau(monitor='val_loss', factor=0.1,
+                          patience=10, verbose=vb),
         ]
     if tensorboard:
-        callbacks.append(TensorBoard(log_dir=log_dir + 'tensorboard/', batch_size=batch_size))
+        callbacks.append(TensorBoard(log_dir=log_dir + 'tensorboard/',
+                                     batch_size=batch_size))
     print('【training】')
     history = model.fit_generator(train_gen,
                                   steps_per_epoch=train_steps,
@@ -302,7 +306,8 @@ def main():
     plt.ylim(ymin=0)
     plt.title('Training and validation loss')
     plt.legend()
-    plt.savefig(log_dir + 'fig_{}{}_loss.png'.format(mdl_name, ver), transparent=True, bbox_inches='tight')
+    plt.savefig(log_dir + 'fig_{}{}_loss.png'.format(mdl_name, ver),
+                transparent=True, bbox_inches='tight')
 
     print('【evaluation】')
     bin_true, day_true, true = get_test_true(test_gen, test_steps)
@@ -313,29 +318,59 @@ def main():
     print('Naivemodel: {}'.format(nv_eval))
     print('{}{}: {}'.format(mdl_name, ver, md_eval))
 
-    df_day_true = pd.DataFrame(day_true, index=pd.date_range(end=ed_day, periods=93), columns=['True value'])
-    df_nv_day_pred = pd.DataFrame(nv_day_pred, index=pd.date_range(end=ed_day, periods=93), columns=['Naive predicton'])
-    df_md_day_pred = pd.DataFrame(md_day_pred, index=pd.date_range(end=ed_day, periods=93), columns=['{} prediction'.format(mdl_name)])
-    df_nv_day_eval = pd.DataFrame(nv_day_eval, index=pd.date_range(end=ed_day, periods=93), columns=['Naive error'])
-    df_md_day_eval = pd.DataFrame(md_day_eval, index=pd.date_range(end=ed_day, periods=93), columns=['{} error'.format(mdl_name)])
-    df_day_eval = pd.concat([df_day_true, df_nv_day_pred, df_md_day_pred, df_md_day_eval, df_nv_day_eval], axis=1)
-    df_day_eval.to_csv(log_dir + 'df_{}{}_eval_day.csv'.format(mdl_name, ver), index=None)
+    df_day_true = pd.DataFrame(day_true,
+                               index=pd.date_range(end=ed_day, periods=93),
+                               columns=['True value'])
+    df_nv_day_pred = pd.DataFrame(nv_day_pred,
+                                  index=pd.date_range(end=ed_day, periods=93),
+                                  columns=['Naive predicton'])
+    df_md_day_pred = pd.DataFrame(md_day_pred,
+                                  index=pd.date_range(end=ed_day, periods=93),
+                                  columns=['{} prediction'.format(mdl_name)])
+    df_nv_day_eval = pd.DataFrame(nv_day_eval,
+                                  index=pd.date_range(end=ed_day, periods=93),
+                                  columns=['Naive error'])
+    df_md_day_eval = pd.DataFrame(md_day_eval,
+                                  index=pd.date_range(end=ed_day, periods=93),
+                                  columns=['{} error'.format(mdl_name)])
+    df_day_eval = pd.concat([df_day_true, df_nv_day_pred, df_md_day_pred,
+                             df_md_day_eval, df_nv_day_eval],
+                            axis=1)
+    df_day_eval.to_csv(log_dir + 'df_{}{}_eval_day.csv'.format(mdl_name, ver),
+                       index=None)
     df_day_eval.loc[:, ['Naive predicton', '{} prediction'.format(mdl_name), 'True value']].plot()
-    plt.savefig(log_dir + 'fig_{}{}_pred_day_vs_nv.png'.format(mdl_name, ver), transparent=True, bbox_inches='tight')
+    plt.savefig(log_dir + 'fig_{}{}_pred_day_vs_nv.png'.format(mdl_name, ver),
+                transparent=True, bbox_inches='tight')
     df_day_eval.loc[:, ['Naive error', '{} error'.format(mdl_name)]].plot()
-    plt.savefig(log_dir + 'fig_{}{}_eval_day_vs_nv.png'.format(mdl_name, ver), transparent=True, bbox_inches='tight')
+    plt.savefig(log_dir + 'fig_{}{}_eval_day_vs_nv.png'.format(mdl_name, ver),
+                transparent=True, bbox_inches='tight')
 
-    df_bin_true = pd.DataFrame(bin_true, index=latlon, columns=['True value'])
-    df_nv_bin_pred = pd.DataFrame(nv_bin_pred, index=latlon, columns=['Naive predicton'])
-    df_md_bin_pred = pd.DataFrame(md_bin_pred, index=latlon, columns=['{} prediction'.format(mdl_name)])
-    df_nv_bin_eval = pd.DataFrame(nv_bin_eval, index=latlon, columns=['Naive error'])
-    df_md_bin_eval = pd.DataFrame(md_bin_eval, index=latlon, columns=['{} error'.format(mdl_name)])
-    df_bin_eval = pd.concat([df_bin_true, df_nv_bin_pred, df_md_bin_pred, df_md_bin_eval, df_nv_bin_eval], axis=1)
-    df_bin_eval.to_csv(log_dir + 'df_{}{}_eval_bin.csv'.format(mdl_name, ver), index=None)
+    df_bin_true = pd.DataFrame(bin_true,
+                               index=latlon,
+                               columns=['True value'])
+    df_nv_bin_pred = pd.DataFrame(nv_bin_pred,
+                                  index=latlon,
+                                  columns=['Naive predicton'])
+    df_md_bin_pred = pd.DataFrame(md_bin_pred,
+                                  index=latlon,
+                                  columns=['{} prediction'.format(mdl_name)])
+    df_nv_bin_eval = pd.DataFrame(nv_bin_eval,
+                                  index=latlon,
+                                  columns=['Naive error'])
+    df_md_bin_eval = pd.DataFrame(md_bin_eval,
+                                  index=latlon,
+                                  columns=['{} error'.format(mdl_name)])
+    df_bin_eval = pd.concat([df_bin_true, df_nv_bin_pred, df_md_bin_pred,
+                             df_md_bin_eval, df_nv_bin_eval],
+                            axis=1)
+    df_bin_eval.to_csv(log_dir + 'df_{}{}_eval_bin.csv'.format(mdl_name, ver),
+                       index=None)
     df_bin_eval.loc[:, ['Naive predicton', '{} prediction'.format(mdl_name), 'True value']].plot()
-    plt.savefig(log_dir + 'fig_{}{}_pred_bin_vs_nv.png'.format(mdl_name, ver), transparent=True, bbox_inches='tight')
+    plt.savefig(log_dir + 'fig_{}{}_pred_bin_vs_nv.png'.format(mdl_name, ver),
+                transparent=True, bbox_inches='tight')
     df_bin_eval.loc[:, ['Naive error', '{} error'.format(mdl_name)]].plot()
-    plt.savefig(log_dir + 'fig_{}{}_eval_bin_vs_nv.png'.format(mdl_name, ver), transparent=True, bbox_inches='tight')
+    plt.savefig(log_dir + 'fig_{}{}_eval_bin_vs_nv.png'.format(mdl_name, ver),
+                transparent=True, bbox_inches='tight')
 
     df_bin_eval = df_bin_eval.reset_index()
     df_bin_eval['lat'] = df_bin_eval['index'].astype(str).str[:2].astype(int)
@@ -373,15 +408,17 @@ def main():
     if os.path.exists(record_file):
         with open(log_dir + 'record.csv', 'a') as f:
             f.write('{},{},{}{},{},{},{},{},{},{},{},{}\n'
-                    .format(now, md_eval, mdl_name, ver, str_num_filters, opt_name, lr, decay,
-                            str_dropouts, str_recurrent_dropouts, epochs,random_seed))
+                    .format(now, md_eval, mdl_name, ver, str_num_filters,
+                            opt_name, lr, decay, str_dropouts,
+                            str_recurrent_dropouts, epochs,random_seed))
     else:
         with open(log_dir + 'record.csv', 'a') as f:
             f.write('date,eval,model,filt,optm,lr,decay,drpout,r_drpout,epch,seed\n')
             f.write('{},{},Naivemodel,None,None,None,None,None,None,None,None\n'.format(now, nv_eval))
             f.write('{},{},{}{},{},{},{},{},{},{},{},{}\n'
-                    .format(now, md_eval, mdl_name, ver, str_num_filters, opt_name, lr, decay,
-                            str_dropouts, str_recurrent_dropouts, epochs,random_seed))
+                    .format(now, md_eval, mdl_name, ver, str_num_filters,
+                            opt_name, lr, decay, str_dropouts,
+                            str_recurrent_dropouts, epochs,random_seed))
 
 if __name__ == '__main__':
     main()
