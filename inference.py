@@ -11,8 +11,7 @@ from mpl_toolkits.basemap import Basemap
 from tqdm import tqdm
 import keras.optimizers
 import keras.backend as K
-from keras.callbacks import EarlyStopping, ModelCheckpoint
-from keras.callbacks import ReduceLROnPlateau, TensorBoard
+from keras.callbacks import ReduceLROnPlateau, ModelCheckpoint
 
 from params import args
 import models, naives, losses
@@ -32,7 +31,6 @@ if __name__ == '__main__':
     dropouts = args.dropouts
     recurrent_dropouts = args.recurrent_dropouts
     random_seed = args.random_seed
-    tensorboard = args.tensorboard
     naive_period = args.naive_period
     st_day = args.start_day
     sp1_day = args.split_day_1
@@ -279,15 +277,11 @@ def main():
     model.summary()
     print('optimizer: {} (lr={})\nloss: {}\n'.format(opt_name, lr, ls_name))
     callbacks = [
-        EarlyStopping(monitor='val_loss', patience=5, verbose=vb),
         ModelCheckpoint(filepath=log_dir + 'ckpt_{}{}.h5'.format(mdl_name, ver),
                         monitor='val_loss', save_best_only=True, verbose=vb),
         ReduceLROnPlateau(monitor='val_loss', factor=0.1,
                           patience=10, verbose=vb),
         ]
-    if tensorboard:
-        callbacks.append(TensorBoard(log_dir=log_dir + 'tensorboard/',
-                                     batch_size=batch_size))
     print('【training】')
     history = model.fit_generator(train_gen,
                                   steps_per_epoch=train_steps,
