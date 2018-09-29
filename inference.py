@@ -45,7 +45,7 @@ if __name__ == '__main__':
     os.environ['PYTHONHASHSEED'] = '0'
     np.random.seed(random_seed)
     random.seed(random_seed)
-        tf.set_random_seed(random_seed)
+    tf.set_random_seed(random_seed)
 
 def list_to_str(list):
     return ' '.join(map(str, list))
@@ -281,7 +281,7 @@ def main():
                         monitor='val_loss', save_best_only=True, verbose=vb),
         ReduceLROnPlateau(monitor='val_loss', factor=0.1,
                           patience=10, verbose=vb),
-        CSVLogger(log_dir + 'history_{}{}.csv').format(mdl_name, ver),
+        CSVLogger(log_dir + 'history_{}{}.csv'.format(mdl_name, ver)),
         ]
     print('【training】')
     history = model.fit_generator(train_gen,
@@ -328,8 +328,8 @@ def main():
     df_md_day_eval = pd.DataFrame(md_day_eval,
                                   index=pd.date_range(end=ed_day, periods=93),
                                   columns=['{} error'.format(mdl_name)])
-    df_day_eval = pd.concat([df_day_true, df_nv_day_pred, df_md_day_pred,
-                             df_md_day_eval, df_nv_day_eval],
+    df_day_eval = pd.concat([df_nv_day_pred, df_md_day_pred, df_day_true,
+                             df_nv_day_eval, df_md_day_eval],
                             axis=1)
     df_day_eval.to_csv(log_dir + 'df_{}{}_eval_day.csv'.format(mdl_name, ver),
                        index=None)
@@ -355,8 +355,8 @@ def main():
     df_md_bin_eval = pd.DataFrame(md_bin_eval,
                                   index=latlon,
                                   columns=['{} error'.format(mdl_name)])
-    df_bin_eval = pd.concat([df_bin_true, df_nv_bin_pred, df_md_bin_pred,
-                             df_md_bin_eval, df_nv_bin_eval],
+    df_bin_eval = pd.concat([df_nv_bin_pred, df_md_bin_pred, df_bin_true,
+                             df_nv_bin_eval, df_md_bin_eval],
                             axis=1)
     df_bin_eval.to_csv(log_dir + 'df_{}{}_eval_bin.csv'.format(mdl_name, ver),
                        index=None)
