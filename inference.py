@@ -1,13 +1,10 @@
 import tensorflow as tf
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import os
 import glob
 import datetime
 import random
-from PIL import Image
-from mpl_toolkits.basemap import Basemap
 from tqdm import tqdm
 import keras.optimizers
 import keras.backend as K
@@ -182,23 +179,6 @@ def generator(data, lookback, min_idx, max_idx, batch_size, target_length):
             targets[j] = data[rows[j]][-target_length:]
         yield samples, targets
 
-def plot_on_map(evals, cmax, save_name):
-    lat = np.arange(-89, 91)
-    lon = np.arange(-179, 181)
-    lon, lat = np.meshgrid(lon, lat)
-    fig = plt.figure(figsize=(10, 8))
-    m = Basemap(projection='lcc', resolution='l',
-                width=2E6, height=2E6,
-                lat_0=37.5, lon_0=137.5,)
-    m.shadedrelief(scale=0.5)
-    m.pcolormesh(lon, lat, evals,
-                 latlon=True, cmap='jet')
-    plt.clim(0, cmax)
-    m.drawcoastlines(color='lightgray')
-    plt.colorbar(label='Poisson Log Likelihood')
-    plt.savefig(log_dir + 'fig_{}_eval_bin.png'.format(save_name),
-                transparent=True, bbox_inches='tight')
-
 def main():
     session_conf = tf.ConfigProto(
         intra_op_parallelism_threads=1,
@@ -226,8 +206,6 @@ def main():
     max_m2 = data_m2.max(axis=(0,1))
     max_m4 = data_m4.max(axis=(0,1))
     data_m2 = data_m2 * max_m4 / max_m2
-    plt.hist(data_m2[:train_period].sum(axis=0), bins=10)
-    plt.savefig(log_dir + 'fig_train_hist.png', transparent=True, bbox_inches='tight')
     target_length = data_m4.shape[1]
     data = np.hstack([data_m2, data_m4])
     print('data shape: {}'.format(data.shape))
@@ -292,18 +270,6 @@ def main():
                                   callbacks=callbacks,
                                   verbose=vb)
 
-    loss = history.history['loss']
-    val_loss = history.history['val_loss']
-    epochs_range = range(len(loss))
-    plt.figure()
-    plt.plot(epochs_range, loss, 'b-', label='Training loss')
-    plt.plot(epochs_range, val_loss, 'r-', label='Validation loss')
-    plt.ylim(ymin=0)
-    plt.title('Training and validation loss')
-    plt.legend()
-    plt.savefig(log_dir + 'fig_{}{}_loss.png'.format(mdl_name, ver),
-                transparent=True, bbox_inches='tight')
-
     print('【evaluation】')
     bin_true, day_true, true = get_test_true(test_gen, test_steps)
     nv_bin_pred, nv_day_pred, nv_pred, nv_bin_eval, nv_day_eval, nv_eval = model_evaluate(
@@ -331,14 +297,7 @@ def main():
     df_day_eval = pd.concat([df_nv_day_pred, df_md_day_pred, df_day_true,
                              df_nv_day_eval, df_md_day_eval],
                             axis=1)
-    df_day_eval.to_csv(log_dir + 'df_{}{}_eval_day.csv'.format(mdl_name, ver),
-                       index=None)
-    df_day_eval.loc[:, ['Naive predicton', '{} prediction'.format(mdl_name), 'True value']].plot()
-    plt.savefig(log_dir + 'fig_{}{}_pred_day_vs_nv.png'.format(mdl_name, ver),
-                transparent=True, bbox_inches='tight')
-    df_day_eval.loc[:, ['Naive error', '{} error'.format(mdl_name)]].plot()
-    plt.savefig(log_dir + 'fig_{}{}_eval_day_vs_nv.png'.format(mdl_name, ver),
-                transparent=True, bbox_inches='tight')
+    df_day_eval.to_csv(log_dir + 'eval_day_{}{}.csv'.format(mdl_name, ver))
 
     df_bin_true = pd.DataFrame(bin_true,
                                index=latlon,
@@ -358,40 +317,7 @@ def main():
     df_bin_eval = pd.concat([df_nv_bin_pred, df_md_bin_pred, df_bin_true,
                              df_nv_bin_eval, df_md_bin_eval],
                             axis=1)
-    df_bin_eval.to_csv(log_dir + 'df_{}{}_eval_bin.csv'.format(mdl_name, ver),
-                       index=None)
-    df_bin_eval.loc[:, ['Naive predicton', '{} prediction'.format(mdl_name), 'True value']].plot()
-    plt.savefig(log_dir + 'fig_{}{}_pred_bin_vs_nv.png'.format(mdl_name, ver),
-                transparent=True, bbox_inches='tight')
-    df_bin_eval.loc[:, ['Naive error', '{} error'.format(mdl_name)]].plot()
-    plt.savefig(log_dir + 'fig_{}{}_eval_bin_vs_nv.png'.format(mdl_name, ver),
-                transparent=True, bbox_inches='tight')
-
-    df_bin_eval = df_bin_eval.reset_index()
-    df_bin_eval['lat'] = df_bin_eval['index'].astype(str).str[:2].astype(int)
-    df_bin_eval['lon'] = df_bin_eval['index'].astype(str).str[3:].astype(int)
-    df_bin_eval = df_bin_eval.iloc[:, 1:]
-
-    bin_trues = np.zeros((180, 360))
-    nv_bin_preds = np.zeros((180, 360))
-    md_bin_preds = np.zeros((180, 360))
-    nv_bin_evals = np.zeros((180, 360))
-    md_bin_evals = np.zeros((180, 360))
-
-    for idx, row in df_bin_eval.iterrows():
-        la = row['lat'].astype(int)
-        lo = row['lon'].astype(int)
-        bin_trues[la+89, lo+179] = row['True value']
-        nv_bin_preds[la+89, lo+179] = row['Naive predicton']
-        md_bin_preds[la+89, lo+179] = row['{} prediction'.format(mdl_name)]
-        nv_bin_evals[la+89, lo+179] = row['Naive error']
-        md_bin_evals[la+89, lo+179] = row['{} error'.format(mdl_name)]
-
-    plot_on_map(bin_trues, 0.3, 'true')
-    plot_on_map(nv_bin_preds, 0.3, 'Naive_pred')
-    plot_on_map(md_bin_preds, 0.3, mdl_name+ver+'_pred')
-    plot_on_map(nv_bin_evals, 2.0, 'Naive_eval')
-    plot_on_map(md_bin_evals, 2.0, mdl_name+ver+'_eval')
+    df_bin_eval.to_csv(log_dir + 'eval_bin_{}{}.csv'.format(mdl_name, ver))
 
     if not record:
         return
