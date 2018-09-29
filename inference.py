@@ -45,7 +45,7 @@ if __name__ == '__main__':
     os.environ['PYTHONHASHSEED'] = '0'
     np.random.seed(random_seed)
     random.seed(random_seed)
-    tf.set_random_seed(random_seed)
+        tf.set_random_seed(random_seed)
 
 def list_to_str(list):
     return ' '.join(map(str, list))
@@ -281,7 +281,7 @@ def main():
                         monitor='val_loss', save_best_only=True, verbose=vb),
         ReduceLROnPlateau(monitor='val_loss', factor=0.1,
                           patience=10, verbose=vb),
-        CSVLogger(log_dir + 'history_{}{}.csv'),
+        CSVLogger(log_dir + 'history_{}{}.csv').format(mdl_name, ver),
         ]
     print('【training】')
     history = model.fit_generator(train_gen,
