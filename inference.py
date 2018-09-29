@@ -11,7 +11,7 @@ from mpl_toolkits.basemap import Basemap
 from tqdm import tqdm
 import keras.optimizers
 import keras.backend as K
-from keras.callbacks import ReduceLROnPlateau, ModelCheckpoint
+from keras.callbacks import ReduceLROnPlateau, ModelCheckpoint, CSVLogger
 
 from params import args
 import models, naives, losses
@@ -281,6 +281,7 @@ def main():
                         monitor='val_loss', save_best_only=True, verbose=vb),
         ReduceLROnPlateau(monitor='val_loss', factor=0.1,
                           patience=10, verbose=vb),
+        CSVLogger(log_dir + 'history_{}{}.csv'),
         ]
     print('【training】')
     history = model.fit_generator(train_gen,
