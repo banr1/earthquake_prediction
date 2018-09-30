@@ -44,7 +44,8 @@ def main():
     hist.plot()
     save(fig_dir + 'loss_{}{}.png'.format(mdl_name, ver))
 
-    eval_day = pd.read_csv(log_dir + 'eval_day_{}{}.csv'.format(mdl_name, ver), index_col=0)
+    eval_day = pd.read_csv(log_dir + 'eval_day_{}{}.csv'.format(mdl_name, ver),
+                           index_col=0)
     eval_day.index = pd.to_datetime(eval_day.index)
     pred = eval_day.iloc[:, :3]
     pred.plot()
@@ -53,7 +54,8 @@ def main():
     eval.plot()
     save(fig_dir + 'eval_day_{}{}_Naive.png'.format(mdl_name, ver))
 
-    eval_bin = pd.read_csv(log_dir + 'eval_bin_{}{}.csv'.format(mdl_name, ver), index_col=0)
+    eval_bin = pd.read_csv(log_dir + 'eval_bin_{}{}.csv'.format(mdl_name, ver),
+                           index_col=0)
     pred = eval_bin.iloc[:, :3]
     pred.plot()
     save(fig_dir + 'pred_bin_{}{}_Naive.png'.format(mdl_name, ver))
@@ -74,11 +76,13 @@ def main():
         md_preds[la+89, lo+179] = row['{} prediction'.format(mdl_name)]
         nv_evals[la+89, lo+179] = row['Naive error']
         md_evals[la+89, lo+179] = row['{} error'.format(mdl_name)]
-    plot_on_map(trues, 0.3, 'true.png')
-    plot_on_map(nv_preds, 0.3, 'pred_bin_Naive.png')
-    plot_on_map(md_preds, 0.3, 'pred_bin_{}{}.png'.format(mdl_name, ver))
-    plot_on_map(nv_evals, 2.0, 'eval_bin_Naive.png')
-    plot_on_map(md_evals, 2.0, 'eval_bin_{}{}.png'.format(mdl_name, ver))
+    pred_cmax = np.max([trues, nv_preds, md_preds])
+    eval_cmax = np.max([nv_evals, md_evals])
+    plot_on_map(trues, pred_cmax, 'true.png')
+    plot_on_map(nv_preds, pred_cmax, 'pred_bin_Naive.png')
+    plot_on_map(md_preds, pred_cmax, 'pred_bin_{}{}.png'.format(mdl_name, ver))
+    plot_on_map(nv_evals, eval_cmax, 'eval_bin_Naive.png')
+    plot_on_map(md_evals, eval_cmax, 'eval_bin_{}{}.png'.format(mdl_name, ver))
 
 if __name__ == '__main__':
     main()
