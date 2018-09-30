@@ -100,11 +100,13 @@ def raw_to_csv(raw_files, csv_file):
                     csv.writelines(csv_line)
 
 def get_grid_data(df):
-    df['latlon'] = df['latitude'].astype(str) + '-' + df['longitude'].astype(str)
+    df['latlon'] = df['latitude'].astype(str) + '-' \
+                   + df['longitude'].astype(str)
     df_area = pd.read_table(input_raw_dir + 'mainland.forecast.nodes.dat',
                              names=('lon', 'lat'),
                              delim_whitespace=True,)
-    df_area['latlon'] = df_area['lat'].astype(str).str[:2] + '-' + df_area['lon'].astype(str).str[:3]
+    df_area['latlon'] = df_area['lat'].astype(str).str[:2] + '-' \
+                        + df_area['lon'].astype(str).str[:3]
     area = list(df_area['latlon'].unique())
     df = df[df['latlon'].isin(area)]
     df = df[['year', 'month', 'day', 'latlon']]
@@ -115,7 +117,8 @@ def get_grid_data(df):
 def get_daily_data(df, start, end, dummy_col):
     start = str(start)
     end = str(end)
-    df['time'] = df['year'].astype(str) + '-' + df['month'].astype(str) + '-' + df['day'].astype(str)
+    df['time'] = df['year'].astype(str) + '-' \
+                 + df['month'].astype(str) + '-' + df['day'].astype(str)
     df['time'] = pd.to_datetime(df['time'])
     df = df[['time', 'latlon']]
     df = pd.get_dummies(df, columns=['latlon'], prefix='', prefix_sep='')
@@ -187,7 +190,8 @@ def main():
     sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)
     K.set_session(sess)
 
-    train_period, val_period, test_period = get_period(st_day, sp1_day, sp2_day, ed_day)
+    train_period, val_period, test_period = get_period(
+            st_day, sp1_day, sp2_day, ed_day)
     raw_files = sorted(glob.glob(input_raw_dir + 'h????'))
     csv_file = input_preprocessed_dir + 'df.csv'
     if not os.path.exists(csv_file):
@@ -339,8 +343,9 @@ def main():
                             str_recurrent_dropouts, epochs,random_seed))
     else:
         with open(log_dir + 'record.csv', 'a') as f:
-            f.write('date,eval,model,filt,optm,lr,decay,drpout,r_drpout,epch,seed\n')
-            f.write('{},{},Naivemodel,None,None,None,None,None,None,None,None\n'.format(now, nv_eval))
+            f.write('date,eval,model,filt,optm,lr,' \
+                    'decay,drpout,r_drpout,epch,seed\n')
+            f.write('{},{},Naivemodel'.format(now, nv_eval) + ',None'*8 + '\n')
             f.write('{},{},{}{},{},{},{},{},{},{},{},{}\n'
                     .format(now, md_eval, mdl_name, ver, str_num_filters,
                             opt_name, lr, decay, str_dropouts,
