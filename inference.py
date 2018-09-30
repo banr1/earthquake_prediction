@@ -251,13 +251,12 @@ def main():
     model = model_class.build_model(data,
                                     lookback=lb,
                                     batch_size=batch_size,
-                                    optimizer=optimizer,
-                                    loss=loss,
                                     stateful=stateful,
                                     target_length=target_length,
                                     num_filters=num_filters,
                                     dropouts=dropouts,
                                     recurrent_dropouts=recurrent_dropouts)
+    model.compile(optimizer=optimizer, loss=loss)
     model.summary()
     print('optimizer: {} (lr={})\nloss: {}\n'.format(opt_name, lr, ls_name))
     callbacks = [

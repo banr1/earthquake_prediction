@@ -8,7 +8,7 @@ class Basemodel():
         pass
 
 class SimpleRNNmodel(Basemodel):
-    def build_model(self, float_data, lookback, batch_size, optimizer, loss, stateful, target_length,
+    def build_model(self, float_data, lookback, batch_size, stateful, target_length,
                     num_filters, dropouts, recurrent_dropouts):
         if stateful:
             input = Input(batch_shape=(batch_size, lookback, float_data.shape[-1]))
@@ -18,11 +18,10 @@ class SimpleRNNmodel(Basemodel):
                       dropout=dropouts[0], recurrent_dropout=recurrent_dropouts[0])(input)
         output = Dense(target_length, activation='relu')(x)
         model = Model(input, output)
-        model.compile(optimizer=optimizer, loss=loss)
         return model
 
 class GRUmodel(Basemodel):
-    def build_model(self, float_data, lookback, batch_size, optimizer, loss, stateful, target_length,
+    def build_model(self, float_data, lookback, batch_size, stateful, target_length,
                     num_filters, dropouts, recurrent_dropouts):
         if stateful:
             input = Input(batch_shape=(batch_size, lookback, float_data.shape[-1]))
@@ -32,11 +31,10 @@ class GRUmodel(Basemodel):
                 dropout=dropouts[0], recurrent_dropout=recurrent_dropouts[0])(input)
         output = Dense(target_length, activation='relu')(x)
         model = Model(input, output)
-        model.compile(optimizer=optimizer, loss=loss)
         return model
 
 class LSTMmodel(Basemodel):
-    def build_model(self, float_data, lookback, batch_size, optimizer, loss, stateful, target_length,
+    def build_model(self, float_data, lookback, batch_size, stateful, target_length,
                     num_filters, dropouts, recurrent_dropouts):
         if stateful:
             input = Input(batch_shape=(batch_size, lookback, float_data.shape[-1]))
@@ -46,11 +44,10 @@ class LSTMmodel(Basemodel):
                  dropout=dropouts[0], recurrent_dropout=recurrent_dropouts[0])(input)
         output = Dense(target_length, activation='relu')(x)
         model = Model(input, output)
-        model.compile(optimizer=optimizer, loss=loss)
         return model
 
 class StackedGRUmodel(Basemodel):
-    def build_model(self, float_data, lookback, batch_size, optimizer, loss, stateful, target_length,
+    def build_model(self, float_data, lookback, batch_size, stateful, target_length,
                     num_filters, dropouts, recurrent_dropouts):
         if stateful:
             input = Input(batch_shape=(batch_size, lookback, float_data.shape[-1]))
@@ -62,11 +59,10 @@ class StackedGRUmodel(Basemodel):
                 dropout=dropouts[1], recurrent_dropout=recurrent_dropouts[1])(input)
         output = Dense(target_length, activation='relu')(x)
         model = Model(input, output)
-        model.compile(optimizer=optimizer, loss=loss)
         return model
 
 class StackedLSTMmodel(Basemodel):
-    def build_model(self, float_data, lookback, batch_size, optimizer, loss, stateful, target_length,
+    def build_model(self, float_data, lookback, batch_size, stateful, target_length,
                     num_filters, dropouts, recurrent_dropouts):
         if stateful:
             input = Input(batch_shape=(batch_size, lookback, float_data.shape[-1]))
@@ -78,5 +74,4 @@ class StackedLSTMmodel(Basemodel):
                 dropout=dropouts[1], recurrent_dropout=recurrent_dropouts[1])(input)
         output = Dense(target_length, activation='relu')(x)
         model = Model(input, output)
-        model.compile(optimizer=optimizer, loss=loss)
         return model
