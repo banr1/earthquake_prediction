@@ -32,7 +32,7 @@ def plot_on_map(evals, cmax, filename):
     plt.clim(0, cmax)
     m.drawcoastlines(color='lightgray')
     plt.colorbar(label='Poisson Log Likelihood')
-    save(fig_dir + 'eval_bin_{}.png'.format(filename))
+    save(fig_dir + filename)
 
 def main():
     hist = pd.read_csv(log_dir + 'history_{}{}.csv'.format(mdl_name, ver))
@@ -45,18 +45,18 @@ def main():
     eval_day.index = pd.to_datetime(eval_day.index)
     pred = eval_day.iloc[:, :3]
     pred.plot()
-    save(fig_dir + 'pred_day_{}{}_nv.png'.format(mdl_name, ver))
+    save(fig_dir + 'pred_day_{}{}_Naive.png'.format(mdl_name, ver))
     eval = eval_day.iloc[:, 3:]
     eval.plot()
-    save(fig_dir + 'eval_day_{}{}_nv.png'.format(mdl_name, ver))
+    save(fig_dir + 'eval_day_{}{}_Naive.png'.format(mdl_name, ver))
 
     eval_bin = pd.read_csv(log_dir + 'eval_bin_{}{}.csv'.format(mdl_name, ver), index_col=0)
     pred = eval_bin.iloc[:, :3]
     pred.plot()
-    save(fig_dir + 'pred_bin_{}{}_nv.png'.format(mdl_name, ver))
+    save(fig_dir + 'pred_bin_{}{}_Naive.png'.format(mdl_name, ver))
     eval = eval_bin.iloc[:, 3:]
     eval.plot()
-    save(fig_dir + 'eval_bin_{}{}_nv.png'.format(mdl_name, ver))
+    save(fig_dir + 'eval_bin_{}{}_Naive.png'.format(mdl_name, ver))
 
     eval_bin = eval_bin.reset_index()
     eval_bin['lat'] = eval_bin['index'].astype(str).str[:2].astype(int)
@@ -71,11 +71,11 @@ def main():
         md_preds[la+89, lo+179] = row['{} prediction'.format(mdl_name)]
         nv_evals[la+89, lo+179] = row['Naive error']
         md_evals[la+89, lo+179] = row['{} error'.format(mdl_name)]
-    plot_on_map(trues, 0.3, 'true')
-    plot_on_map(nv_preds, 0.3, 'Naive_pred')
-    plot_on_map(md_preds, 0.3, mdl_name+ver+'_pred')
-    plot_on_map(nv_evals, 2.0, 'Naive_eval')
-    plot_on_map(md_evals, 2.0, mdl_name+ver+'_eval')
+    plot_on_map(trues, 0.3, 'true.png')
+    plot_on_map(nv_preds, 0.3, 'pred_bin_Naive.png')
+    plot_on_map(md_preds, 0.3, 'pred_bin_{}{}.png'.format(mdl_name, ver))
+    plot_on_map(nv_evals, 2.0, 'eval_bin_Naive.png')
+    plot_on_map(md_evals, 2.0, 'eval_bin_{}{}.png'.format(mdl_name, ver))
 
 if __name__ == '__main__':
     main()
