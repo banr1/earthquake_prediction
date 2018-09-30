@@ -140,7 +140,7 @@ def get_test_true(test_gen, test_steps):
         else:
             bin_targets = np.vstack((bin_targets, target))
             day_targets = np.hstack((day_targets, day_target))
-    return np.mean(bin_targets, axis=0), day_targets, np.mean(day_targets)
+    return np.mean(bin_targets, axis=0), day_targets
 
 def model_evaluate(test_gen, test_steps, pre_mean_loss, target_length, model):
     for step in tqdm(range(test_steps)):
@@ -159,8 +159,8 @@ def model_evaluate(test_gen, test_steps, pre_mean_loss, target_length, model):
             day_preds = np.hstack((day_preds, day_pred))
             bin_errors = np.vstack((bin_errors, bin_error))
             day_errors = np.hstack((day_errors, day_error))
-    return (np.mean(bin_preds, axis=0), day_preds, np.mean(day_preds),
-            np.mean(bin_errors, axis=0), day_errors, np.mean(day_errors))
+    return (np.mean(bin_preds, axis=0), day_preds,
+            np.mean(bin_errors, axis=0), day_errors)
 
 def generator(data, lookback, min_idx, max_idx, batch_size, target_length):
     if max_idx is None:
@@ -271,11 +271,16 @@ def main():
                                   verbose=vb)
 
     print('【evaluation】')
-    bin_true, day_true, true = get_test_true(test_gen, test_steps)
-    nv_bin_pred, nv_day_pred, nv_pred, nv_bin_eval, nv_day_eval, nv_eval = model_evaluate(
+    bin_true, day_true = get_test_true(test_gen, test_steps)
+    true = np.mean(bin_true)
+    nv_bin_pred, nv_day_pred, nv_bin_eval, nv_day_eval = model_evaluate(
             test_gen, test_steps, pre_mean_loss, target_length, naive)
-    md_bin_pred, md_day_pred, md_pred, md_bin_eval, md_day_eval, md_eval = model_evaluate(
+    nv_pred = np.mean(nv_bin_pred)
+    nv_eval = np.mean(nv_bin_eval)
+    md_bin_pred, md_day_pred, md_bin_eval, md_day_eval = model_evaluate(
             test_gen, test_steps, pre_mean_loss, target_length, model)
+    md_pred = np.mean(md_bin_pred)
+    md_eval = np.mean(md_bin_eval)
     print('Naivemodel: {}'.format(nv_eval))
     print('{}{}: {}'.format(mdl_name, ver, md_eval))
 
