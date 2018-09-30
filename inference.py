@@ -48,7 +48,8 @@ def list_to_str(list):
     return ' '.join(map(str, list))
 
 def get_default_lr(optimizer_name):
-    dict = {'SGD': 0.01, 'RMSprop':0.001, 'Adagrad': 0.01, 'Adadelta':1.0, 'Adam': 0.001, 'Nadam': 0.002}
+    dict = {'SGD': 0.01, 'RMSprop':0.001, 'Adagrad': 0.01,
+            'Adadelta':1.0, 'Adam': 0.001, 'Nadam': 0.002}
     return dict[optimizer_name]
 
 def get_period(start_day, split_day_1, split_day_2, end_day):
@@ -95,7 +96,8 @@ def raw_to_csv(raw_files, csv_file):
                     longitude = raw_line[33:36]
                     depth = raw_line[45:49].strip()
                     magnitude = raw_line[52:54]
-                    csv_list = [year, month, day, longitude, latitude, depth, magnitude]
+                    csv_list = [year, month, day,
+                                longitude, latitude, depth, magnitude]
                     csv_line = ", ".join(csv_list) + "\n"
                     csv.writelines(csv_line)
 
