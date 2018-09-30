@@ -5,6 +5,9 @@ plt.style.use('seaborn-white')
 import seaborn as sns
 sns.set_style('white')
 from mpl_toolkits.basemap import Basemap
+import matplotlib.cbook as cbook
+import warnings
+warnings.filterwarnings('ignore', category=cbook.mplDeprecation)
 
 from params import args
 
