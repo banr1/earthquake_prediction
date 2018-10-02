@@ -8,7 +8,10 @@ from mpl_toolkits.basemap import Basemap
 import matplotlib.cbook as cbook
 import warnings
 warnings.filterwarnings('ignore', category=cbook.mplDeprecation)
+from keras.models import load_model
+from keras.utils import plot_model
 
+from losses import *
 from params import args
 
 if __name__ == '__main__':
@@ -38,6 +41,13 @@ def plot_on_map(evals, cmax, filename):
     save(fig_dir + filename)
 
 def main():
+    model = load_model(log_dir + 'ckpt_{}{}.h5'.format(mdl_name, ver),
+                       custom_objects={'mean_poisson_log_likelihood':
+                                       mean_poisson_log_likelihood})
+    plot_model(model, show_shapes=True,
+               to_file=fig_dir + 'mdl_{}{}.png'.format(mdl_name, ver))
+    print('saved {}'.format(fig_dir + 'mdl_{}{}.png'.format(mdl_name, ver)))
+
     hist = pd.read_csv(log_dir + 'history_{}{}.csv'.format(mdl_name, ver))
     hist = hist[['epoch', 'loss', 'val_loss']].set_index('epoch')
     hist.columns = ['train loss', 'validation loss']
