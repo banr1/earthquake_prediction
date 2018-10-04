@@ -5,7 +5,6 @@ import os
 import glob
 import datetime
 import random
-from tqdm import tqdm
 import keras.optimizers
 import keras.backend as K
 from keras.callbacks import ReduceLROnPlateau, ModelCheckpoint, CSVLogger
@@ -136,7 +135,7 @@ def get_daily_data(df, start, end, dummy_col):
     return df
 
 def get_test_true(test_gen, test_steps):
-    for step in tqdm(range(test_steps)):
+    for step in range(test_steps):
         _, target = next(test_gen)
         day_target = np.mean(target, axis=1)
         if step == 0:
@@ -148,7 +147,7 @@ def get_test_true(test_gen, test_steps):
     return np.mean(bin_targets, axis=0), day_targets
 
 def model_evaluate(test_gen, test_steps, pre_mean_loss, target_length, model):
-    for step in tqdm(range(test_steps)):
+    for step in range(test_steps):
         sample, target = next(test_gen)
         pred = model.predict(sample)
         day_pred = np.mean(pred, axis=1)
